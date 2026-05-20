@@ -1,349 +1,782 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="CIRO (Crisis Intelligence & Response Orchestrator) Control Room Dashboard">
-    <title>CIRO — Crisis Intelligence</title>
-    <style>
-        :root {
-            --bg-color: #0d1117;
-            --card-bg: #161b22;
-            --border-color: #30363d;
-            --accent: #00ff88;
-            --accent-dim: rgba(0, 255, 136, 0.15);
-            --text-color: #c9d1d9;
-            --text-muted: #8b949e;
-            --danger: #ff4a4a;
-            --warning: #ffb700;
-        }
+<meta charset="UTF-8">
+<title>CIRO — Control Panel</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+:root {
+  --bg: #0f1419;
+  --surface: #1a2332;
+  --surface-hover: #1e2a3a;
+  --border: #2d3a4a;
+  --text: #e8eaed;
+  --text-secondary: #9aa0a6;
+  --text-muted: #5f6368;
+  --accent: #f97316;
+  --accent-dim: rgba(249, 115, 22, 0.12);
+  --blue: #3b82f6;
+  --blue-dim: rgba(59, 130, 246, 0.12);
+  --green: #22c55e;
+  --green-dim: rgba(34, 197, 94, 0.12);
+  --red: #ef4444;
+  --red-dim: rgba(239, 68, 68, 0.12);
+  --yellow: #eab308;
+  --yellow-dim: rgba(234, 179, 8, 0.12);
+  --purple: #a855f7;
+  --purple-dim: rgba(168, 85, 247, 0.12);
+  --radius: 10px;
+  --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --mono: 'SF Mono', Consolas, 'Courier New', monospace;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--font); background: var(--bg); color: var(--text); padding: 24px; min-height: 100vh; }
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
+.header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
+.header h1 { font-size: 22px; font-weight: 700; }
+.header h1 span { color: var(--accent); }
+.status-badge { display: inline-flex; align-items: center; gap: 6px; background: var(--green-dim); color: var(--green); font-size: 12px; font-weight: 600; padding: 5px 12px; border-radius: 20px; }
+.status-badge .dot { width: 7px; height: 7px; background: var(--green); border-radius: 50%; animation: pulse 2s infinite; }
 
-        body {
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', Courier, monospace;
-            padding: 2rem;
-            line-height: 1.5;
-            display: flex;
-            flex-direction: column;
-            min-height: 100vh;
-        }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 24px; }
+.stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
+.stat-card .label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
+.stat-card .value { font-size: 26px; font-weight: 700; font-family: var(--mono); }
+.stat-card .sub { font-size: 11px; color: var(--text-secondary); margin-top: 4px; }
 
-        header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 2px solid var(--border-color);
-            padding-bottom: 1.5rem;
-            margin-bottom: 2rem;
-        }
+.section { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 16px; overflow: hidden; }
+.section-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid var(--border); }
+.section-header h3 { font-size: 14px; font-weight: 600; }
+.section-body { padding: 16px 18px; }
 
-        h1 {
-            font-size: 1.8rem;
-            color: #ffffff;
-            letter-spacing: -0.5px;
-        }
+.zone-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
+.zone-card { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 12px; cursor: pointer; transition: all 0.15s; }
+.zone-card:hover { border-color: var(--accent); background: var(--surface-hover); }
+.zone-card.active { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.zone-card .name { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+.zone-card .province { font-size: 11px; color: var(--text-muted); }
+.zone-card .severity-bar { height: 3px; background: var(--border); border-radius: 2px; margin-top: 8px; overflow: hidden; }
+.zone-card .severity-fill { height: 100%; border-radius: 2px; transition: width 0.3s; }
 
-        .live-badge {
-            background-color: var(--accent-dim);
-            color: var(--accent);
-            border: 1px solid var(--accent);
-            padding: 0.4rem 0.8rem;
-            font-size: 0.85rem;
-            font-weight: bold;
-            border-radius: 4px;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
+.btn { display: inline-flex; align-items: center; gap: 8px; padding: 9px 18px; border-radius: 7px; border: none; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.15s; }
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { background: #ea580c; }
+.btn-secondary { background: var(--blue-dim); color: var(--blue); border: 1px solid rgba(59,130,246,0.3); }
+.btn-secondary:hover { background: rgba(59,130,246,0.2); }
+.btn-purple { background: var(--purple-dim); color: var(--purple); border: 1px solid rgba(168,85,247,0.3); }
+.btn-purple:hover { background: rgba(168,85,247,0.25); }
+.btn-danger { background: var(--red-dim); color: var(--red); border: 1px solid rgba(239,68,68,0.3); }
+.btn-sm { padding: 6px 12px; font-size: 12px; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-        .pulse-dot {
-            width: 8px;
-            height: 8px;
-            background-color: var(--accent);
-            border-radius: 50%;
-            animation: pulse 1.5s infinite ease-in-out;
-            box-shadow: 0 0 8px var(--accent);
-        }
+.actions { display: flex; gap: 10px; flex-wrap: wrap; }
 
-        @keyframes pulse {
-            0% { transform: scale(0.85); opacity: 0.5; }
-            50% { transform: scale(1.15); opacity: 1; }
-            100% { transform: scale(0.85); opacity: 0.5; }
-        }
+.log-area { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 12px; font-family: var(--mono); font-size: 11px; color: var(--text-secondary); max-height: 280px; overflow-y: auto; line-height: 1.8; }
+.log-entry { padding: 2px 0; border-bottom: 1px solid rgba(45,58,74,0.3); }
+.log-entry.success { color: var(--green); }
+.log-entry.error { color: var(--red); }
+.log-entry.info { color: var(--blue); }
+.log-entry.warn { color: var(--yellow); }
 
-        main {
-            flex: 1;
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 2rem;
-        }
+.signal-table { width: 100%; font-size: 12px; border-collapse: collapse; }
+.signal-table th { text-align: left; color: var(--text-muted); font-weight: 500; padding: 8px 10px; border-bottom: 1px solid var(--border); font-size: 11px; text-transform: uppercase; letter-spacing: 0.03em; }
+.signal-table td { padding: 8px 10px; border-bottom: 1px solid rgba(45,58,74,0.5); }
+.signal-table tr:hover td { background: var(--surface-hover); }
 
-        @media (max-width: 900px) {
-            main {
-                grid-template-columns: 1fr;
-            }
-        }
+.severity { display: inline-block; width: 24px; height: 24px; border-radius: 5px; text-align: center; line-height: 24px; font-size: 11px; font-weight: 700; }
+.sev-low { background: var(--green-dim); color: var(--green); }
+.sev-med { background: var(--yellow-dim); color: var(--yellow); }
+.sev-high { background: var(--red-dim); color: var(--red); }
 
-        .section-full {
-            grid-column: 1 / -1;
-        }
+.feature-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 8px; }
+.feature-item { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 10px; }
+.feature-item .feat-name { font-size: 10px; color: var(--text-muted); font-family: var(--mono); margin-bottom: 4px; }
+.feature-item .feat-value { font-size: 16px; font-weight: 700; font-family: var(--mono); }
 
-        section {
-            background-color: var(--card-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 1.5rem;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
-        }
+.tabs { display: flex; gap: 4px; margin-bottom: 16px; }
+.tab { padding: 7px 14px; border-radius: 6px; font-size: 12px; font-weight: 500; cursor: pointer; color: var(--text-secondary); background: transparent; border: 1px solid transparent; }
+.tab.active { background: var(--accent-dim); color: var(--accent); border-color: rgba(249,115,22,0.3); }
+.tab:hover:not(.active) { background: var(--surface-hover); }
 
-        section h2 {
-            font-size: 1.2rem;
-            color: #ffffff;
-            margin-bottom: 1.2rem;
-            border-bottom: 1px dashed var(--border-color);
-            padding-bottom: 0.5rem;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
+.empty-state { text-align: center; padding: 40px; color: var(--text-muted); }
+.empty-state i { font-size: 32px; margin-bottom: 12px; display: block; }
 
-        /* Agent Status Grid */
-        .agents-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 1rem;
-        }
+.spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.6s linear infinite; }
 
-        @media (max-width: 600px) {
-            .agents-grid {
-                grid-template-columns: 1fr;
-            }
-        }
+/* Agent 3 */
+.alert-badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; letter-spacing: 0.05em; }
+.alert-LOW    { background: var(--green-dim); color: var(--green); }
+.alert-MODERATE { background: var(--yellow-dim); color: var(--yellow); }
+.alert-HIGH   { background: var(--red-dim); color: var(--red); }
+.alert-CRITICAL { background: var(--red); color: #fff; }
 
-        .agent-card {
-            background-color: var(--bg-color);
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
-            padding: 1rem;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            min-height: 120px;
-        }
+.summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; margin-bottom: 16px; }
+.summary-card { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; text-align: center; }
+.summary-card .s-val { font-size: 22px; font-weight: 700; font-family: var(--mono); }
+.summary-card .s-lbl { font-size: 10px; color: var(--text-muted); margin-top: 2px; }
 
-        .agent-name {
-            font-weight: bold;
-            color: #ffffff;
-            font-size: 1rem;
-            margin-bottom: 0.5rem;
-        }
+.forecast-chart { display: flex; align-items: stretch; gap: 3px; height: 100px; padding: 4px 0; }
+.forecast-bar { flex: 1; min-width: 0; border-radius: 3px 3px 0 0; transition: opacity 0.1s; cursor: pointer; position: relative; }
+.forecast-bar:hover { opacity: 0.8; }
 
-        .agent-desc {
-            font-size: 0.8rem;
-            color: var(--text-muted);
-            margin-bottom: 1rem;
-        }
+.chart-legend { display: flex; gap: 16px; font-size: 11px; color: var(--text-secondary); margin-top: 6px; }
+.chart-legend span { display: inline-flex; align-items: center; gap: 5px; }
+.legend-dot { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
 
-        .badge {
-            display: inline-block;
-            padding: 0.25rem 0.6rem;
-            font-size: 0.75rem;
-            font-weight: bold;
-            border-radius: 3px;
-            text-transform: uppercase;
-            align-self: flex-start;
-        }
+.model-info-row { display: flex; align-items: center; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid rgba(45,58,74,0.4); font-size: 12px; }
+.model-info-row:last-child { border-bottom: none; }
+.model-info-row .mi-key { color: var(--text-muted); }
+.model-info-row .mi-val { font-family: var(--mono); color: var(--text); }
 
-        .badge-active {
-            background-color: rgba(0, 255, 136, 0.1);
-            color: var(--accent);
-            border: 1px solid rgba(0, 255, 136, 0.3);
-        }
-
-        /* Zone Risk Summary List */
-        .zones-list {
-            display: flex;
-            flex-direction: column;
-            gap: 0.75rem;
-        }
-
-        .zone-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0.6rem 0.8rem;
-            background-color: var(--bg-color);
-            border: 1px solid var(--border-color);
-            border-radius: 4px;
-        }
-
-        .zone-name {
-            font-weight: bold;
-            color: #ffffff;
-        }
-
-        .risk-level {
-            font-size: 0.85rem;
-            font-weight: bold;
-        }
-
-        .risk-low {
-            color: var(--accent);
-        }
-
-        .risk-medium {
-            color: var(--warning);
-        }
-
-        .risk-high {
-            color: var(--danger);
-        }
-
-        /* Recent Signals Table */
-        .signals-table-wrapper {
-            overflow-x: auto;
-            width: 100%;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            text-align: left;
-            font-size: 0.85rem;
-        }
-
-        th {
-            color: #ffffff;
-            border-bottom: 2px solid var(--border-color);
-            padding: 0.75rem;
-            font-weight: bold;
-        }
-
-        td {
-            padding: 0.75rem;
-            border-bottom: 1px solid var(--border-color);
-            color: var(--text-muted);
-        }
-
-        .empty-state {
-            text-align: center;
-            padding: 2.5rem 0;
-            color: var(--text-muted);
-            font-style: italic;
-        }
-
-        footer {
-            margin-top: 3rem;
-            border-top: 1px solid var(--border-color);
-            padding-top: 1.5rem;
-            text-align: center;
-            font-size: 0.8rem;
-            color: var(--text-muted);
-        }
-    </style>
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
 </head>
 <body>
-    <header>
-        <h1>CIRO — Control Room</h1>
-        <div class="live-badge">
-            <div class="pulse-dot"></div>
-            <span>LIVE MONITORING</span>
-        </div>
-    </header>
 
-    <main>
-        <!-- Agent Status -->
-        <section>
-            <h2>Agent Status <span>[System Layer]</span></h2>
-            <div class="agents-grid">
-                <div class="agent-card">
-                    <div>
-                        <div class="agent-name">Agent 2</div>
-                        <div class="agent-desc">Data Collector (Open-Meteo, GloFAS, NDMA, Social)</div>
-                    </div>
-                    <span class="badge badge-active">active</span>
-                </div>
-                <div class="agent-card">
-                    <div>
-                        <div class="agent-name">Agent 3</div>
-                        <div class="agent-desc">ML Predictor (XGBoost Classifier + Prophet Engine)</div>
-                    </div>
-                    <span class="badge badge-active">active</span>
-                </div>
-            </div>
-        </section>
+<div class="header">
+  <h1><span>CIRO</span> Control Panel</h1>
+  <div class="status-badge"><div class="dot"></div>LIVE</div>
+</div>
 
-        <!-- Zone Risk Summary -->
-        <section>
-            <h2>Zone Risk Summary <span>[Monitored Cities]</span></h2>
-            <div class="zones-list">
-                <div class="zone-row">
-                    <span class="zone-name">Karachi</span>
-                    <span class="risk-level risk-medium">MEDIUM RISK</span>
-                </div>
-                <div class="zone-row">
-                    <span class="zone-name">Lahore</span>
-                    <span class="risk-level risk-low">LOW RISK</span>
-                </div>
-                <div class="zone-row">
-                    <span class="zone-name">Islamabad</span>
-                    <span class="risk-level risk-low">LOW RISK</span>
-                </div>
-                <div class="zone-row">
-                    <span class="zone-name">Peshawar</span>
-                    <span class="risk-level risk-medium">MEDIUM RISK</span>
-                </div>
-                <div class="zone-row">
-                    <span class="zone-name">Quetta</span>
-                    <span class="risk-level risk-low">LOW RISK</span>
-                </div>
-                <div class="zone-row">
-                    <span class="zone-name">Multan</span>
-                    <span class="risk-level risk-high">HIGH RISK</span>
-                </div>
-                <div class="zone-row">
-                    <span class="zone-name">Faisalabad</span>
-                    <span class="risk-level risk-low">LOW RISK</span>
-                </div>
-                <div class="zone-row">
-                    <span class="zone-name">Muzaffarabad</span>
-                    <span class="risk-level risk-high">HIGH RISK</span>
-                </div>
-            </div>
-        </section>
+<div class="grid" id="stats">
+  <div class="stat-card"><div class="label">Signals Stored</div><div class="value" id="stat-signals">—</div><div class="sub">30-day buffer</div></div>
+  <div class="stat-card"><div class="label">Zones Active</div><div class="value" id="stat-zones">8</div><div class="sub">Pakistan</div></div>
+  <div class="stat-card"><div class="label">Last Fetch</div><div class="value" id="stat-last-fetch" style="font-size:14px">Never</div><div class="sub">Auto: every 15 min</div></div>
+  <div class="stat-card"><div class="label">Max Severity</div><div class="value" id="stat-max-sev">—</div><div class="sub">Current 24h</div></div>
+</div>
 
-        <!-- Recent Signals Table -->
-        <section class="section-full">
-            <h2>Recent Telemetry & Signals <span>[Incoming Stream]</span></h2>
-            <div class="signals-table-wrapper">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Time</th>
-                            <th>Zone</th>
-                            <th>Type</th>
-                            <th>Severity</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td colspan="4" class="empty-state">No incoming signals in buffer. Awaiting next fetch cycle...</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </section>
-    </main>
+<!-- Agent 2 Quick Actions -->
+<div class="section">
+  <div class="section-header">
+    <h3><i class="fa-solid fa-bolt" style="color:var(--accent);margin-right:8px"></i>Agent 2 — Data Collection</h3>
+  </div>
+  <div class="section-body">
+    <div class="actions">
+      <button class="btn btn-primary" onclick="fetchAll()" id="btn-fetch"><i class="fa-solid fa-satellite-dish"></i> Fetch All Signals</button>
+      <button class="btn btn-secondary" onclick="backfillAll()" id="btn-backfill"><i class="fa-solid fa-clock-rotate-left"></i> Backfill 30 Days</button>
+      <button class="btn btn-secondary" onclick="loadFloodForecast()" id="btn-flood"><i class="fa-solid fa-water"></i> Flood Forecast</button>
+      <button class="btn btn-secondary" onclick="loadFeatures()" id="btn-features"><i class="fa-solid fa-microchip"></i> ML Features</button>
+    </div>
+  </div>
+</div>
 
-    <footer>
-        <p>Google Antigravity Hackathon | Challenge 3 — Crisis Intelligence & Response Orchestrator</p>
-    </footer>
+<!-- Agent 1 Satellite Analysis -->
+<div class="section" style="border-color:rgba(34,197,94,0.35)">
+  <div class="section-header">
+    <h3><i class="fa-solid fa-satellite" style="color:var(--green);margin-right:8px"></i>Agent 1 — Satellite & Geospatial <span style="font-size:11px;color:var(--text-muted);font-weight:400;margin-left:8px">GeoGemma · Sentinel-2 · NDWI Change Detection</span></h3>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-sm btn-secondary" onclick="agent1Status()" id="btn-a1-status"><i class="fa-solid fa-circle-info"></i> Status</button>
+    </div>
+  </div>
+  <div class="section-body">
+    <div class="actions" style="margin-bottom:14px">
+      <button class="btn btn-primary" style="background:var(--green)" onclick="agent1AnalyzeZone()" id="btn-a1-analyze"><i class="fa-solid fa-satellite"></i> Analyze Zone</button>
+      <button class="btn btn-secondary" onclick="agent1AnalyzeAll()" id="btn-a1-all"><i class="fa-solid fa-globe"></i> Analyze All Zones</button>
+      <span style="font-size:12px;color:var(--text-muted);align-self:center">for <b id="a1-zone-name">G-10, Islamabad</b></span>
+    </div>
+    <div id="agent1-body">
+      <div class="empty-state" style="padding:24px">
+        <i class="fa-solid fa-satellite" style="color:var(--green);opacity:0.4"></i>
+        <div>Select a zone above, then click <b style="color:var(--green)">Analyze Zone</b>.</div>
+        <div style="font-size:11px;margin-top:6px">Uses Sentinel-2 imagery + GeoGemma AI to detect water body expansion.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Zones -->
+<div class="section">
+  <div class="section-header">
+    <h3><i class="fa-solid fa-location-dot" style="color:var(--blue);margin-right:8px"></i>Monitored Zones</h3>
+    <span style="font-size:11px;color:var(--text-muted)">Click to select</span>
+  </div>
+  <div class="section-body">
+    <div class="zone-grid" id="zones"></div>
+  </div>
+</div>
+
+<!-- Agent 3 Predictor -->
+<div class="section" style="border-color:rgba(168,85,247,0.35)">
+  <div class="section-header">
+    <h3><i class="fa-solid fa-brain" style="color:var(--purple);margin-right:8px"></i>Agent 3 — ML Predictor <span style="font-size:11px;color:var(--text-muted);font-weight:400;margin-left:8px">XGBoost · 30-day flood &amp; heatstroke forecast</span></h3>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-sm btn-secondary" onclick="loadModelInfo()" id="btn-model-info"><i class="fa-solid fa-circle-info"></i> Model Info</button>
+      <button class="btn btn-sm btn-danger" onclick="retrainModel()" id="btn-retrain"><i class="fa-solid fa-rotate"></i> Retrain</button>
+    </div>
+  </div>
+  <div class="section-body">
+    <div class="actions" style="margin-bottom:16px">
+      <button class="btn btn-purple" onclick="runPredict()" id="btn-predict">
+        <i class="fa-solid fa-wand-magic-sparkles"></i> Predict 30 Days
+      </button>
+      <span id="predict-zone-label" style="font-size:12px;color:var(--text-muted);align-self:center">for <b id="pzone-name">G-10, Islamabad</b></span>
+    </div>
+    <div id="agent3-body">
+      <div class="empty-state" style="padding:30px">
+        <i class="fa-solid fa-chart-line" style="color:var(--purple);opacity:0.4"></i>
+        <div>Select a zone above, then click <b style="color:var(--purple)">Predict 30 Days</b>.</div>
+        <div style="font-size:11px;margin-top:6px">First run trains XGBoost (~30s). Subsequent runs are instant.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Agent 2 Data View -->
+<div class="section">
+  <div class="section-header">
+    <h3><i class="fa-solid fa-signal" style="color:var(--green);margin-right:8px"></i>Data View</h3>
+    <div class="tabs" id="view-tabs">
+      <div class="tab active" data-tab="signals" onclick="switchTab('signals')">Signals</div>
+      <div class="tab" data-tab="features" onclick="switchTab('features')">ML Features</div>
+      <div class="tab" data-tab="flood" onclick="switchTab('flood')">Flood Forecast</div>
+    </div>
+  </div>
+  <div class="section-body" id="data-body">
+    <div class="empty-state"><i class="fa-solid fa-database"></i>Click a zone, then use Agent 2 actions to load data.</div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-header">
+    <h3><i class="fa-solid fa-terminal" style="color:var(--text-muted);margin-right:8px"></i>Activity Log</h3>
+    <button class="btn btn-sm btn-danger" onclick="clearLog()"><i class="fa-solid fa-trash"></i> Clear</button>
+  </div>
+  <div class="section-body">
+    <div class="log-area" id="log"><div class="log-entry info">[System] Ready. Select a zone and use Agent 2 or Agent 3 actions.</div></div>
+  </div>
+</div>
+
+<script>
+const API2 = window.location.origin + '/api/v1/agent2';
+const API3 = window.location.origin + '/api/v1/agent3';
+const API1 = window.location.origin + '/api/v1/agent1';
+const zones = ['islamabad-g10', 'lahore-city', 'karachi-south', 'peshawar-city', 'multan-city', 'jacobabad-city', 'sukkur-city', 'quetta-city'];
+const zoneNames = {'islamabad-g10':'G-10, Islamabad','lahore-city':'Lahore City','karachi-south':'Karachi South','peshawar-city':'Peshawar City','multan-city':'Multan City','jacobabad-city':'Jacobabad City','sukkur-city':'Sukkur City','quetta-city':'Quetta City'};
+const zoneProvinces = {'islamabad-g10':'Federal','lahore-city':'Punjab','karachi-south':'Sindh','peshawar-city':'KPK','multan-city':'Punjab','jacobabad-city':'Sindh','sukkur-city':'Sindh','quetta-city':'Balochistan'};
+let selectedZone = 'islamabad-g10';
+let currentTab = 'signals';
+
+function log(msg, type='info') {
+  const el = document.getElementById('log');
+  const time = new Date().toLocaleTimeString();
+  el.innerHTML += `<div class="log-entry ${type}">[${time}] ${msg}</div>`;
+  el.scrollTop = el.scrollHeight;
+}
+function clearLog() { document.getElementById('log').innerHTML = ''; }
+function sevClass(s) { return s <= 3 ? 'sev-low' : s <= 6 ? 'sev-med' : 'sev-high'; }
+function sevColor(s) { return s <= 3 ? 'var(--green)' : s <= 6 ? 'var(--yellow)' : 'var(--red)'; }
+
+function switchTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.tab').forEach(t => {
+    t.classList.remove('active');
+    if (t.getAttribute('data-tab') === tab) t.classList.add('active');
+  });
+  if (tab === 'signals') {
+    log(`Loading signals for ${zoneNames[selectedZone]}...`);
+    fetch(`${API2}/signals/${selectedZone}?hours=24`)
+      .then(r => r.json())
+      .then(data => { renderSignals(data); log(`${zoneNames[selectedZone]}: ${data.total_signals} signals`, 'success'); })
+      .catch(e => log(`Failed: ${e.message}`, 'error'));
+  }
+  if (tab === 'features') loadFeatures();
+  if (tab === 'flood') loadFloodForecast();
+}
+
+function renderZones() {
+  const container = document.getElementById('zones');
+  container.innerHTML = zones.map(z => `
+    <div class="zone-card ${selectedZone===z?'active':''}" onclick="selectZone('${z}')">
+      <div class="name">${zoneNames[z]}</div>
+      <div class="province">${zoneProvinces[z]}</div>
+      <div class="severity-bar"><div class="severity-fill" id="sev-${z}" style="width:0%;background:var(--green)"></div></div>
+    </div>
+  `).join('');
+}
+
+async function selectZone(z) {
+  selectedZone = z;
+  document.getElementById('pzone-name').textContent = zoneNames[z];
+  document.getElementById('a1-zone-name').textContent = zoneNames[z];
+  renderZones();
+  if (currentTab === 'signals') {
+    log(`Loading signals for ${zoneNames[z]}...`);
+    try {
+      const res = await fetch(`${API2}/signals/${z}?hours=24`);
+      const data = await res.json();
+      renderSignals(data);
+      log(`${zoneNames[z]}: ${data.total_signals} signals loaded`, 'success');
+    } catch(e) { log(`Failed: ${e.message}`, 'error'); }
+  } else if (currentTab === 'features') {
+    loadFeatures();
+  } else if (currentTab === 'flood') {
+    loadFloodForecast();
+  }
+}
+
+function renderSignals(data) {
+  const body = document.getElementById('data-body');
+  if (!data.signals || data.signals.length === 0) {
+    body.innerHTML = '<div class="empty-state"><i class="fa-solid fa-inbox"></i>No signals. Click "Fetch All Signals" first.</div>';
+    return;
+  }
+  let html = `<div style="margin-bottom:12px;font-size:12px;color:var(--text-secondary)"><b>${data.total_signals}</b> signals | Max severity: <b>${data.max_severity}</b> | Zone: <b>${data.zone_name}</b></div>`;
+  html += `<div style="overflow-x:auto"><table class="signal-table"><thead><tr><th>Type</th><th>Value</th><th>Sev</th><th>Source</th><th>Confidence</th><th>Time</th></tr></thead><tbody>`;
+  data.signals.slice(0, 40).forEach(s => {
+    const time = new Date(s.timestamp).toLocaleString();
+    html += `<tr>
+      <td><b>${s.signal_type}</b></td>
+      <td style="font-family:var(--mono)">${s.value}</td>
+      <td><span class="severity ${sevClass(s.severity)}">${s.severity}</span></td>
+      <td>${s.source}</td>
+      <td style="font-family:var(--mono)">${(s.confidence*100).toFixed(0)}%</td>
+      <td style="color:var(--text-muted);font-size:11px">${time}</td>
+    </tr>`;
+  });
+  html += '</tbody></table></div>';
+  if (data.total_signals > 40) html += `<div style="text-align:center;padding:12px;color:var(--text-muted);font-size:11px">Showing 40 of ${data.total_signals}</div>`;
+  body.innerHTML = html;
+}
+
+async function fetchAll() {
+  const btn = document.getElementById('btn-fetch');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Fetching...';
+  log('Triggering full fetch cycle (6 sources x 5 zones)...', 'info');
+  try {
+    const res = await fetch(`${API2}/fetch`, {method:'POST'});
+    const data = await res.json();
+    log(`DONE: ${data.signals_collected} signals collected from ${data.zones_processed} zones`, 'success');
+    document.getElementById('stat-signals').textContent = data.signals_collected;
+    document.getElementById('stat-last-fetch').textContent = new Date().toLocaleTimeString();
+    if (data.errors && data.errors.length) data.errors.forEach(e => log(e, 'error'));
+    selectZone(selectedZone);
+    loadZoneStats();
+  } catch(e) { log(`Fetch failed: ${e.message}`, 'error'); }
+  btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-satellite-dish"></i> Fetch All Signals';
+}
+
+async function backfillAll() {
+  const btn = document.getElementById('btn-backfill');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Backfilling...';
+  log('Backfilling 30 days real data for all zones (Open-Meteo FREE)...', 'info');
+  let total = 0;
+  for (const z of zones) {
+    try {
+      const res = await fetch(`${API2}/backfill/${z}?days=30`, {method:'POST'});
+      const data = await res.json();
+      total += data.signals_stored || 0;
+      log(`  ${zoneNames[z]}: ${data.signals_stored} historical signals`, 'success');
+    } catch(e) { log(`  ${zoneNames[z]}: FAILED - ${e.message}`, 'error'); }
+  }
+  log(`Backfill complete: ${total} total signals stored`, 'success');
+  document.getElementById('stat-signals').textContent = total;
+  btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-clock-rotate-left"></i> Backfill 30 Days';
+}
+
+async function loadFeatures() {
+  const z = selectedZone;
+  log(`Loading ML features for ${zoneNames[z]}...`);
+  try {
+    const res = await fetch(`${API2}/features/${z}`);
+    const data = await res.json();
+    renderFeatures(data);
+    log(`ML features loaded for ${zoneNames[z]}`, 'success');
+  } catch(e) { log(`Features failed: ${e.message}`, 'error'); }
+}
+
+function renderFeatures(data) {
+  const body = document.getElementById('data-body');
+  if (!data.features) { body.innerHTML = '<div class="empty-state">No features available. Run fetch first.</div>'; return; }
+  let html = `<div style="margin-bottom:12px;font-size:12px;color:var(--text-secondary)">Feature vector for <b>${data.zone_name}</b> — computed at ${new Date(data.computed_at).toLocaleString()}</div>`;
+  html += '<div class="feature-grid">';
+  Object.entries(data.features).forEach(([k, v]) => {
+    let color = 'var(--text)';
+    if (k.includes('rain') && v > 50) color = 'var(--blue)';
+    if (k.includes('heat') && v > 5) color = 'var(--red)';
+    if (k.includes('temp') && v > 40) color = 'var(--red)';
+    html += `<div class="feature-item"><div class="feat-name">${k}</div><div class="feat-value" style="color:${color}">${typeof v === 'number' ? v.toFixed(2) : v}</div></div>`;
+  });
+  html += '</div>';
+  body.innerHTML = html;
+}
+
+async function loadFloodForecast() {
+  const z = selectedZone;
+  log(`Loading 30-day flood forecast for ${zoneNames[z]}...`);
+  try {
+    const res = await fetch(`${API2}/flood-forecast/${z}`);
+    const data = await res.json();
+    renderFlood(data);
+    log(`Flood forecast: ${data.elevated_days} elevated days in next 30d`, data.elevated_days > 3 ? 'warn' : 'success');
+  } catch(e) { log(`Flood forecast failed: ${e.message}`, 'error'); }
+}
+
+function renderFlood(data) {
+  const body = document.getElementById('data-body');
+  if (!data.flood_signals || data.flood_signals.length === 0) {
+    body.innerHTML = `<div class="empty-state" style="color:var(--green)"><i class="fa-solid fa-check-circle"></i>No elevated flood risk in the next 30 days for ${data.zone_name}.<br><small style="color:var(--text-muted)">Source: GloFAS via Open-Meteo (FREE)</small></div>`;
+    return;
+  }
+  let html = `<div style="margin-bottom:12px;font-size:12px;color:var(--text-secondary)"><b>${data.elevated_days}</b> days with elevated river discharge | Zone: <b>${data.zone_name}</b><br><small>Source: GloFAS via Open-Meteo</small></div>`;
+  html += `<table class="signal-table"><thead><tr><th>Day</th><th>Discharge (m3/s)</th><th>vs Normal</th><th>Severity</th></tr></thead><tbody>`;
+  data.flood_signals.forEach(s => {
+    const ratio = s.metadata ? s.metadata.ratio_above_normal : '?';
+    const day = s.metadata ? s.metadata.forecast_day : '?';
+    html += `<tr><td>Day ${day}</td><td style="font-family:var(--mono)">${s.value}</td><td style="font-family:var(--mono);color:var(--yellow)">${ratio}x</td><td><span class="severity ${sevClass(s.severity)}">${s.severity}</span></td></tr>`;
+  });
+  html += '</tbody></table>';
+  body.innerHTML = html;
+}
+
+async function loadZoneStats() {
+  try {
+    const res = await fetch(`${API2}/zones`);
+    const data = await res.json();
+    let maxSev = 0;
+    if (data.zones) data.zones.forEach(z => {
+      maxSev = Math.max(maxSev, z.max_severity_24h || 0);
+      const fill = document.getElementById(`sev-${z.zone_id}`);
+      if (fill) { fill.style.width = `${(z.max_severity_24h||0) * 10}%`; fill.style.background = sevColor(z.max_severity_24h||0); }
+    });
+    document.getElementById('stat-max-sev').textContent = maxSev;
+    document.getElementById('stat-max-sev').style.color = sevColor(maxSev);
+  } catch(e) {}
+}
+
+// ─── Agent 3 ────────────────────────────────────────────────────────────────
+
+async function runPredict() {
+  const btn = document.getElementById('btn-predict');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner" style="border-top-color:var(--purple)"></span> Predicting...';
+  const z = selectedZone;
+  log(`Agent 3: running 30-day prediction for ${zoneNames[z]}...`, 'info');
+  log('  (First run trains XGBoost — may take ~30s)', 'info');
+
+  try {
+    const res = await fetch(`${API3}/predict/${z}`, {method:'POST'});
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.detail || res.statusText);
+    }
+    const data = await res.json();
+    renderPrediction(data);
+    log(`Agent 3: ${zoneNames[z]} — peak flood=${data.summary.peak_flood_risk.toFixed(2)} (day ${data.summary.peak_flood_day}), peak heat=${data.summary.peak_heat_risk.toFixed(2)} (day ${data.summary.peak_heat_day}), alert=${data.summary.overall_alert_level}`,
+      data.summary.overall_alert_level === 'CRITICAL' || data.summary.overall_alert_level === 'HIGH' ? 'warn' : 'success');
+  } catch(e) {
+    log(`Agent 3 predict failed: ${e.message}`, 'error');
+    document.getElementById('agent3-body').innerHTML = `<div class="empty-state"><i class="fa-solid fa-triangle-exclamation" style="color:var(--red)"></i><div style="color:var(--red)">${e.message}</div><div style="font-size:11px;margin-top:8px">Make sure the server is running and Agent 2 has data. Try "Fetch All Signals" first.</div></div>`;
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> Predict 30 Days';
+}
+
+function riskColor(v) {
+  if (v >= 0.75) return 'var(--red)';
+  if (v >= 0.5)  return 'var(--yellow)';
+  if (v >= 0.25) return 'var(--blue)';
+  return 'var(--green)';
+}
+
+function renderPrediction(data) {
+  const s = data.summary;
+  const preds = data.predictions;
+
+  const maxFlood = Math.max(...preds.map(p => p.flood_risk), 0.01);
+  const maxHeat  = Math.max(...preds.map(p => p.heatstroke_risk), 0.01);
+  const chartMax = Math.max(maxFlood, maxHeat, 0.3);
+
+  // Summary cards
+  let html = `
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap">
+      <div style="font-size:13px;font-weight:600;color:var(--text-secondary)">30-Day Outlook — <b style="color:var(--text)">${data.zone_name}</b></div>
+      <span class="alert-badge alert-${s.overall_alert_level}">${s.overall_alert_level}</span>
+      <span style="font-size:11px;color:var(--text-muted)">as of ${new Date(data.predicted_at).toLocaleString()}</span>
+    </div>
+    <div class="summary-grid">
+      <div class="summary-card">
+        <div class="s-val" style="color:${riskColor(s.peak_flood_risk)}">${(s.peak_flood_risk*100).toFixed(0)}%</div>
+        <div class="s-lbl">Peak Flood Risk<br>Day ${s.peak_flood_day}</div>
+      </div>
+      <div class="summary-card">
+        <div class="s-val" style="color:${riskColor(s.peak_heat_risk)}">${(s.peak_heat_risk*100).toFixed(0)}%</div>
+        <div class="s-lbl">Peak Heat Risk<br>Day ${s.peak_heat_day}</div>
+      </div>
+      <div class="summary-card">
+        <div class="s-val" style="color:var(--blue)">${(s.avg_flood_risk*100).toFixed(0)}%</div>
+        <div class="s-lbl">Avg Flood Risk<br>30-day mean</div>
+      </div>
+      <div class="summary-card">
+        <div class="s-val" style="color:var(--accent)">${(s.avg_heat_risk*100).toFixed(0)}%</div>
+        <div class="s-lbl">Avg Heat Risk<br>30-day mean</div>
+      </div>
+      <div class="summary-card">
+        <div class="s-val" style="color:${s.high_flood_days > 5 ? 'var(--red)' : 'var(--text)'}">${s.high_flood_days}</div>
+        <div class="s-lbl">High Flood Days<br>risk &gt; 60%</div>
+      </div>
+      <div class="summary-card">
+        <div class="s-val" style="color:${s.high_heat_days > 5 ? 'var(--red)' : 'var(--text)'}">${s.high_heat_days}</div>
+        <div class="s-lbl">High Heat Days<br>risk &gt; 60%</div>
+      </div>
+    </div>`;
+
+  // Bar chart — flood (blue) and heat (orange) stacked side-by-side
+  html += `<div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:14px">
+    <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.05em">30-Day Risk Chart</div>
+    <div class="forecast-chart" id="forecast-chart" style="height:120px">`;
+
+  preds.forEach(p => {
+    const fh = Math.round((p.flood_risk / chartMax) * 100);
+    const hh = Math.round((p.heatstroke_risk / chartMax) * 100);
+    const fc = p.flood_risk >= 0.75 ? '#ef4444' : p.flood_risk >= 0.5 ? '#eab308' : '#3b82f6';
+    const hc = p.heatstroke_risk >= 0.75 ? '#ef4444' : p.heatstroke_risk >= 0.5 ? '#f97316' : 'rgba(249,115,22,0.4)';
+    html += `<div style="flex:1;height:100%;display:flex;align-items:flex-end;gap:1px" title="Day ${p.day} | Flood: ${(p.flood_risk*100).toFixed(0)}% | Heat: ${(p.heatstroke_risk*100).toFixed(0)}%">
+      <div style="flex:1;height:${fh}%;background:${fc};border-radius:2px 2px 0 0;min-height:2px"></div>
+      <div style="flex:1;height:${hh}%;background:${hc};border-radius:2px 2px 0 0;min-height:2px"></div>
+    </div>`;
+  });
+
+  html += `</div>
+    <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-muted);margin-top:4px">
+      <span>Day 1</span><span>Day 10</span><span>Day 20</span><span>Day 30</span>
+    </div>
+    <div class="chart-legend" style="margin-top:8px">
+      <span><span class="legend-dot" style="background:var(--blue)"></span>Flood Risk</span>
+      <span><span class="legend-dot" style="background:var(--accent)"></span>Heat Risk</span>
+      <span style="color:var(--text-muted)">Hover bars for exact values</span>
+    </div>
+  </div>`;
+
+  // Day-by-day table (collapsible via "Show Table")
+  html += `<details style="margin-top:4px">
+    <summary style="cursor:pointer;font-size:12px;color:var(--purple);padding:4px 0;user-select:none">Show Day-by-Day Table</summary>
+    <div style="overflow-x:auto;margin-top:10px">
+    <table class="signal-table">
+      <thead><tr><th>Day</th><th>Date</th><th>Temp</th><th>Rain</th><th>Flood Risk</th><th>Heat Risk</th><th>Alert</th><th>Confidence</th><th>Source</th></tr></thead>
+      <tbody>`;
+
+  preds.forEach(p => {
+    const alertColors = {NONE:'var(--text-muted)',LOW:'var(--green)',MODERATE:'var(--yellow)',HIGH:'var(--accent)',CRITICAL:'var(--red)'};
+    const alertColor = alertColors[p.alert_level] || 'var(--text-muted)';
+    const tempColor = p.expected_temp_c >= 44 ? 'var(--red)' : p.expected_temp_c >= 40 ? 'var(--accent)' : 'var(--text)';
+    const rainColor = p.expected_rain_mm > 30 ? 'var(--blue)' : p.expected_rain_mm > 0 ? 'var(--accent2)' : 'var(--text-muted)';
+    const confColors = {high:'var(--green)',moderate:'var(--yellow)',low:'var(--text-muted)'};
+    const confColor = confColors[p.confidence] || 'var(--text-muted)';
+    html += `<tr>
+      <td style="font-family:var(--mono)">Day ${p.day}</td>
+      <td style="font-size:11px;color:var(--text-secondary)">${p.date || ''}</td>
+      <td style="font-family:var(--mono);color:${tempColor}">${p.expected_temp_c ? p.expected_temp_c.toFixed(1) + '°C' : '—'}</td>
+      <td style="font-family:var(--mono);color:${rainColor}">${p.expected_rain_mm !== undefined ? p.expected_rain_mm.toFixed(1) + 'mm' : '—'}</td>
+      <td><span style="font-family:var(--mono);color:${riskColor(p.flood_risk)}">${(p.flood_risk*100).toFixed(1)}%</span></td>
+      <td><span style="font-family:var(--mono);color:${riskColor(p.heatstroke_risk)}">${(p.heatstroke_risk*100).toFixed(1)}%</span></td>
+      <td style="font-size:11px;font-weight:600;color:${alertColor}">${p.alert_level || '—'}</td>
+      <td style="font-size:10px;font-weight:600;color:${confColor}">${(p.confidence || '—').toUpperCase()}</td>
+      <td style="font-size:9px;color:var(--text-muted)">${p.data_source || '—'}</td>
+    </tr>`;
+  });
+
+  html += `</tbody></table></div></details>`;
+
+  document.getElementById('agent3-body').innerHTML = html;
+}
+
+async function loadModelInfo() {
+  log('Fetching Agent 3 model info...', 'info');
+  const btn = document.getElementById('btn-model-info');
+  btn.disabled = true;
+  try {
+    const res = await fetch(`${API3}/model/info`);
+    if (!res.ok) throw new Error((await res.json()).detail || res.statusText);
+    const m = await res.json();
+    const rows = [
+      ['Version',        m.model_version],
+      ['Type',           m.model_type],
+      ['Trained',        new Date(m.training_date).toLocaleString()],
+      ['Samples',        m.training_samples.toLocaleString()],
+      ['Source',         m.training_source],
+      ['Flood AUC',      m.flood_model_auc.toFixed(4)],
+      ['Heat AUC',       m.heat_model_auc.toFixed(4)],
+      ['Flood Accuracy', (m.flood_model_accuracy * 100).toFixed(1) + '%'],
+      ['Heat Accuracy',  (m.heat_model_accuracy * 100).toFixed(1) + '%'],
+    ];
+    const html = rows.map(([k,v]) =>
+      `<div class="model-info-row"><span class="mi-key">${k}</span><span class="mi-val">${v}</span></div>`
+    ).join('');
+    document.getElementById('agent3-body').innerHTML =
+      `<div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:14px;max-width:520px">
+         <div style="font-size:12px;font-weight:600;color:var(--purple);margin-bottom:10px">XGBoost Model Info</div>
+         ${html}
+         <div style="margin-top:14px">
+           <button class="btn btn-purple btn-sm" onclick="runPredict()"><i class="fa-solid fa-wand-magic-sparkles"></i> Predict 30 Days</button>
+         </div>
+       </div>`;
+    log(`Model: AUC flood=${m.flood_model_auc.toFixed(3)} heat=${m.heat_model_auc.toFixed(3)} | trained ${new Date(m.training_date).toLocaleString()}`, 'success');
+  } catch(e) {
+    log(`Model info failed: ${e.message}`, 'error');
+    if (e.message.includes('503') || e.message.includes('502')) {
+      log('Tip: Click "Predict 30 Days" first — model trains on first predict call', 'info');
+    }
+  }
+  btn.disabled = false;
+}
+
+async function retrainModel() {
+  if (!confirm('Retrain model from scratch? Takes ~30s.')) return;
+  const btn = document.getElementById('btn-retrain');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Retraining...';
+  log('Triggering model retrain (runs in background)...', 'info');
+  try {
+    const res = await fetch(`${API3}/retrain`, {method:'POST'});
+    const data = await res.json();
+    log(`Retrain started: ${data.message}`, 'success');
+  } catch(e) {
+    log(`Retrain failed: ${e.message}`, 'error');
+  }
+  setTimeout(() => {
+    btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-rotate"></i> Retrain';
+  }, 3000);
+}
+
+// ─── Agent 1 ─────────────────────────────────────────────────────────────────
+
+async function agent1AnalyzeZone() {
+  const btn = document.getElementById('btn-a1-analyze');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Analyzing...';
+  const z = selectedZone;
+  log(`Agent 1: Satellite analysis for ${zoneNames[z]}...`, 'info');
+
+  try {
+    const res = await fetch(`${API1}/analyze/${z}`, {method:'POST'});
+    if (!res.ok) { const err = await res.json(); throw new Error(err.detail || res.statusText); }
+    const data = await res.json();
+    renderSatelliteResult(data);
+    log(`Agent 1: ${zoneNames[z]} — NDWI Δ=${data.ndwi_delta.toFixed(4)}, AI severity=${data.ai_severity}, flood=${data.ai_flood_detected ? 'YES' : 'no'}`,
+      data.ai_flood_detected ? 'warn' : 'success');
+  } catch(e) {
+    log(`Agent 1 failed: ${e.message}`, 'error');
+    document.getElementById('agent1-body').innerHTML = `<div class="empty-state"><i class="fa-solid fa-triangle-exclamation" style="color:var(--red)"></i><div style="color:var(--red)">${e.message}</div></div>`;
+  }
+
+  btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-satellite"></i> Analyze Zone';
+}
+
+async function agent1AnalyzeAll() {
+  const btn = document.getElementById('btn-a1-all');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Analyzing all...';
+  log('Agent 1: Analyzing all 8 zones via satellite...', 'info');
+
+  try {
+    const res = await fetch(`${API1}/analyze-all`, {method:'POST'});
+    if (!res.ok) { const err = await res.json(); throw new Error(err.detail || res.statusText); }
+    const data = await res.json();
+    renderSatelliteAllResults(data);
+    log(`Agent 1: ${data.zones_analyzed} zones analyzed, ${data.zones_with_flood_signal} with flood signal, highest severity: ${data.highest_severity} (${data.highest_severity_zone})`,
+      data.zones_with_flood_signal > 0 ? 'warn' : 'success');
+  } catch(e) {
+    log(`Agent 1 analyze-all failed: ${e.message}`, 'error');
+  }
+
+  btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-globe"></i> Analyze All Zones';
+}
+
+async function agent1Status() {
+  try {
+    const res = await fetch(`${API1}/status`);
+    const data = await res.json();
+    log(`Agent 1 status: GEE=${data.gee_authenticated ? '✅' : '❌ (simulation)'}, Gemini=${data.gemini_available ? '✅' : '❌'}`, data.gee_authenticated ? 'success' : 'warn');
+  } catch(e) { log(`Agent 1 status failed: ${e.message}`, 'error'); }
+}
+
+function renderSatelliteResult(data) {
+  const floodColor = data.ai_flood_detected ? 'var(--red)' : 'var(--green)';
+  const ndwiColor = data.ndwi_delta > 0.05 ? 'var(--blue)' : data.ndwi_delta < -0.05 ? 'var(--yellow)' : 'var(--text-muted)';
+  
+  let html = `
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap">
+      <div style="font-size:13px;font-weight:600;color:var(--text-secondary)">Satellite Analysis — <b style="color:var(--text)">${data.zone_name}</b></div>
+      <span class="alert-badge" style="background:${data.ai_flood_detected ? 'var(--red-dim)' : 'var(--green-dim)'};color:${floodColor}">${data.ai_flood_detected ? '⚠️ FLOOD DETECTED' : '✓ NO FLOOD'}</span>
+      <span style="font-size:11px;color:var(--text-muted)">${data.data_source} | ${data.satellite}</span>
+    </div>
+    <div class="summary-grid">
+      <div class="summary-card">
+        <div class="s-val" style="color:${ndwiColor}">${data.ndwi_delta >= 0 ? '+' : ''}${data.ndwi_delta.toFixed(4)}</div>
+        <div class="s-lbl">NDWI Delta<br>Water Change</div>
+      </div>
+      <div class="summary-card">
+        <div class="s-val" style="color:${sevColor(data.ai_severity)}">${data.ai_severity}/10</div>
+        <div class="s-lbl">AI Severity<br>GeoGemma</div>
+      </div>
+      <div class="summary-card">
+        <div class="s-val">${(data.ai_confidence * 100).toFixed(0)}%</div>
+        <div class="s-lbl">Confidence<br>Assessment</div>
+      </div>
+      <div class="summary-card">
+        <div class="s-val" style="color:var(--blue)">${data.ai_estimated_extent_km2.toFixed(1)}</div>
+        <div class="s-lbl">Flood Extent<br>km²</div>
+      </div>
+      <div class="summary-card">
+        <div class="s-val" style="font-size:16px">${data.flood_signal_strength.toFixed(3)}</div>
+        <div class="s-lbl">Signal Strength<br>0–1 scale</div>
+      </div>
+    </div>`;
+
+  // AI Description
+  html += `<div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:12px">
+    <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.05em">GeoGemma AI Interpretation</div>
+    <div style="font-size:13px;color:var(--text);line-height:1.6">${data.ai_description || 'No description available'}</div>
+  </div>`;
+
+  // Risk Factors + Recommendations
+  if (data.ai_risk_factors && data.ai_risk_factors.length) {
+    html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px">
+        <div style="font-size:11px;color:var(--red);margin-bottom:6px;font-weight:600">⚠ Risk Factors</div>
+        <ul style="font-size:12px;color:var(--text-secondary);padding-left:16px;margin:0">${data.ai_risk_factors.map(r => `<li style="margin-bottom:4px">${r}</li>`).join('')}</ul>
+      </div>
+      <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px">
+        <div style="font-size:11px;color:var(--green);margin-bottom:6px;font-weight:600">✓ Recommendations</div>
+        <ul style="font-size:12px;color:var(--text-secondary);padding-left:16px;margin:0">${(data.ai_recommendations || []).map(r => `<li style="margin-bottom:4px">${r}</li>`).join('')}</ul>
+      </div>
+    </div>`;
+  }
+
+  // GEE auth note
+  if (!data.gee_authenticated) {
+    html += `<div style="margin-top:12px;padding:8px 12px;background:var(--yellow-dim);border:1px solid rgba(234,179,8,0.3);border-radius:6px;font-size:11px;color:var(--yellow)"><i class="fa-solid fa-info-circle"></i> Running in simulation mode (GEE not authenticated). Data is realistic but not live satellite imagery.</div>`;
+  }
+
+  document.getElementById('agent1-body').innerHTML = html;
+}
+
+function renderSatelliteAllResults(data) {
+  if (!data.results || data.results.length === 0) {
+    document.getElementById('agent1-body').innerHTML = '<div class="empty-state">No results.</div>';
+    return;
+  }
+  let html = `<div style="margin-bottom:12px;font-size:12px;color:var(--text-secondary)"><b>${data.zones_analyzed}</b> zones analyzed | <b style="color:${data.zones_with_flood_signal ? 'var(--red)' : 'var(--green)'}">${data.zones_with_flood_signal}</b> with flood signal</div>`;
+  html += `<table class="signal-table"><thead><tr><th>Zone</th><th>NDWI Δ</th><th>Flood?</th><th>Severity</th><th>Confidence</th><th>Extent (km²)</th><th>Signal</th></tr></thead><tbody>`;
+  data.results.forEach(r => {
+    const fc = r.ai_flood_detected ? 'var(--red)' : 'var(--green)';
+    const ndwiC = r.ndwi_delta > 0.05 ? 'var(--blue)' : 'var(--text-muted)';
+    html += `<tr>
+      <td><b>${r.zone_name}</b><br><span style="font-size:10px;color:var(--text-muted)">${r.province}</span></td>
+      <td style="font-family:var(--mono);color:${ndwiC}">${r.ndwi_delta >= 0 ? '+' : ''}${r.ndwi_delta.toFixed(4)}</td>
+      <td style="color:${fc};font-weight:600">${r.ai_flood_detected ? 'YES' : 'No'}</td>
+      <td><span class="severity ${sevClass(r.ai_severity)}">${r.ai_severity}</span></td>
+      <td style="font-family:var(--mono)">${(r.ai_confidence * 100).toFixed(0)}%</td>
+      <td style="font-family:var(--mono)">${r.ai_estimated_extent_km2.toFixed(1)}</td>
+      <td style="font-family:var(--mono)">${r.flood_signal_strength.toFixed(3)}</td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  document.getElementById('agent1-body').innerHTML = html;
+}
+
+// Init
+renderZones();
+loadZoneStats();
+</script>
 </body>
 </html>

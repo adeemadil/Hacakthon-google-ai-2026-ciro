@@ -1,50 +1,71 @@
-import 'dart:developer' as developer;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'dart:ui' show Color;
 
 class NotificationService {
-  final FlutterLocalNotificationsPlugin _notificationsPlugin = FlutterLocalNotificationsPlugin();
+  static final NotificationService _instance = NotificationService._internal();
+  factory NotificationService() => _instance;
+  NotificationService._internal();
 
-  /// Initialize local notification configs for Android and iOS systems.
+  final FlutterLocalNotificationsPlugin _plugin = FlutterLocalNotificationsPlugin();
+  
+  // Store zone id for notification tap handling
+  String? _lastTappedZone;
+  String? get lastTappedZone => _lastTappedZone;
+  void Function(String zoneId)? onNotificationTap;
+
   Future<void> initialize() async {
-    const AndroidInitializationSettings initializationSettingsAndroid =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
-        
-    const InitializationSettings initializationSettings = InitializationSettings(
-      android: initializationSettingsAndroid,
+    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const iosSettings = DarwinInitializationSettings(
+      requestAlertPermission: true,
+      requestBadgePermission: true,
+      requestSoundPermission: true,
     );
-    
-    try {
-      await _notificationsPlugin.initialize(initializationSettings);
-      developer.log("Notification services initialized successfully.");
-    } catch (e) {
-      developer.log("Failed to set up local notifications plugin: $e");
-    }
+
+    await _plugin.initialize(
+      const InitializationSettings(android: androidSettings, iOS: iosSettings),
+      onDidReceiveNotificationResponse: (response) {
+        final zoneId = response.payload;
+        if (zoneId != null && onNotificationTap != null) {
+          _lastTappedZone = zoneId;
+          onNotificationTap!(zoneId);
+        }
+      },
+    );
   }
 
-  /// Trigger and present a native system notification.
-  Future<void> show(String title, String body) async {
-    const AndroidNotificationDetails androidPlatformChannelSpecifics = AndroidNotificationDetails(
-      'ciro_alerts_channel',
-      'CIRO Emergency Alerts',
-      channelDescription: 'Real-time telemetry and evacuation alerts from CIRO Orchestration.',
-      importance: Importance.max,
-      priority: Priority.high,
+  /// Show a crisis alert notification
+  Future<void> showAlert({
+    required String zoneId,
+    required String zoneName,
+    required int severity,
+    required String message,
+  }) async {
+    final String title = severity >= 8
+        ? '🚨 CRITICAL: $zoneName'
+        : '⚠️ HIGH RISK: $zoneName';
+
+    await _plugin.show(
+      zoneId.hashCode, // unique id per zone
+      title,
+      message,
+      NotificationDetails(
+        android: AndroidNotificationDetails(
+          'ciro_alerts',
+          'Crisis Alerts',
+          channelDescription: 'CIRO flood and heatwave alerts',
+          importance: Importance.max,
+          priority: Priority.high,
+          color: severity >= 8 
+              ? const Color(0xFFEF4444) 
+              : const Color(0xFFEAB308),
+        ),
+        iOS: const DarwinNotificationDetails(
+          presentAlert: true,
+          presentBadge: true,
+          presentSound: true,
+        ),
+      ),
+      payload: zoneId,
     );
-    
-    const NotificationDetails platformChannelSpecifics = NotificationDetails(
-      android: androidPlatformChannelSpecifics,
-    );
-    
-    try {
-      await _notificationsPlugin.show(
-        0, 
-        title, 
-        body, 
-        platformChannelSpecifics,
-      );
-      developer.log("Native notification dispatched: $title");
-    } catch (e) {
-      developer.log("Encountered error while dispatching notification: $e");
-    }
   }
 }

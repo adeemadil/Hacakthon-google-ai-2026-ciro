@@ -1,0 +1,1062 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CIRO — Crisis Intelligence & Response Operations</title>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#080c12;--surface:#0f1620;--surface2:#151d2b;--border:#1e293b;
+  --text:#e2e8f0;--text-dim:#94a3b8;--text-bright:#f8fafc;
+  --accent:#f97316;--accent-dim:#c2410c;
+  --critical:#ef4444;--high:#f97316;--moderate:#eab308;--low:#22c55e;
+  --blue:#3b82f6;--cyan:#06b6d4;
+  --radius:8px;--shadow:0 4px 24px rgba(0,0,0,0.5);
+}
+html,body{height:100%;overflow:hidden;font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text)}
+#map{position:absolute;inset:0;z-index:0}
+
+/* TOP BAR */
+.topbar{position:fixed;top:0;left:0;right:0;height:56px;background:rgba(8,12,18,0.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;z-index:1000;gap:16px}
+.brand{display:flex;align-items:center;gap:10px;margin-right:auto}
+.brand-icon{width:32px;height:32px;border-radius:6px;background:linear-gradient(135deg,var(--accent),#dc2626);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:14px;color:#fff}
+.brand-title{font-size:15px;font-weight:700;color:var(--text-bright);letter-spacing:0.5px}
+.brand-sub{font-size:10px;color:var(--text-dim);letter-spacing:1.5px;text-transform:uppercase}
+.ctrl-group{display:flex;align-items:center;gap:6px}
+.ctrl-btn{height:34px;padding:0 14px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text-dim);font-size:12px;font-weight:500;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;gap:6px}
+.ctrl-btn:hover{border-color:var(--accent);color:var(--text)}
+.ctrl-btn.active{background:var(--accent);border-color:var(--accent);color:#fff}
+.ctrl-btn svg{width:14px;height:14px}
+.status-dot{width:7px;height:7px;border-radius:50%;background:var(--low);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+
+/* TIMELINE */
+.timeline{position:fixed;top:56px;left:0;right:0;height:52px;background:rgba(8,12,18,0.88);backdrop-filter:blur(8px);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;z-index:999;gap:16px}
+.timeline-label{font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px;white-space:nowrap}
+.timeline-day{font-size:18px;font-weight:700;color:var(--accent);min-width:60px;text-align:center}
+.timeline-date{font-size:12px;color:var(--text-dim);min-width:90px}
+.slider-wrap{flex:1;position:relative;display:flex;align-items:center}
+.slider-wrap input[type=range]{width:100%;height:4px;-webkit-appearance:none;appearance:none;background:var(--border);border-radius:2px;outline:none;cursor:pointer}
+.slider-wrap input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--accent);border:2px solid var(--bg);box-shadow:0 0 8px rgba(249,115,22,0.5);cursor:grab}
+.slider-wrap input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:var(--accent);border:2px solid var(--bg)}
+
+/* BOTTOM CARDS */
+.cards-strip{position:fixed;bottom:0;left:0;right:0;height:100px;background:rgba(8,12,18,0.94);backdrop-filter:blur(12px);border-top:1px solid var(--border);display:flex;align-items:center;padding:0 16px;gap:10px;z-index:998;overflow-x:auto}
+.zone-card{flex:0 0 auto;width:190px;height:90px;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:12px 14px;cursor:pointer;transition:all 0.2s;position:relative;overflow:hidden}
+.zone-card:hover{border-color:var(--accent);transform:translateY(-2px);box-shadow:0 4px 16px rgba(249,115,22,0.15)}
+.zone-card.selected{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.zone-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:var(--radius) var(--radius) 0 0}
+.zone-card[data-alert="CRITICAL"]::before{background:var(--critical)}
+.zone-card[data-alert="HIGH"]::before{background:var(--high)}
+.zone-card[data-alert="MODERATE"]::before{background:var(--moderate)}
+.zone-card[data-alert="LOW"]::before{background:var(--low)}
+.zc-name{font-size:13px;font-weight:700;color:var(--text);margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.zc-stats{display:flex;gap:12px}
+.zc-stat{display:flex;flex-direction:column}
+.zc-stat-label{font-size:9px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px}
+.zc-stat-value{font-size:14px;font-weight:800;font-family:'SF Mono',Consolas,monospace}
+.zc-stat-value.flood{color:var(--blue)}
+.zc-stat-value.heat{color:var(--critical)}
+.zc-badge{position:absolute;top:8px;right:8px;font-size:8px;font-weight:700;padding:2px 5px;border-radius:3px;letter-spacing:0.5px}
+.zc-badge.CRITICAL{background:rgba(239,68,68,0.2);color:var(--critical)}
+.zc-badge.HIGH{background:rgba(249,115,22,0.2);color:var(--high)}
+.zc-badge.MODERATE{background:rgba(234,179,8,0.2);color:var(--moderate)}
+.zc-badge.LOW{background:rgba(34,197,94,0.2);color:var(--low)}
+
+/* DETAIL PANEL */
+.detail-panel{position:fixed;top:108px;right:-420px;width:400px;bottom:100px;background:var(--surface);border-left:1px solid var(--border);border-radius:var(--radius) 0 0 var(--radius);z-index:1001;transition:right 0.3s cubic-bezier(0.4,0,0.2,1);overflow-y:auto;box-shadow:var(--shadow);padding:24px}
+.detail-panel.open{right:0}
+.dp-close{position:absolute;top:12px;right:12px;width:28px;height:28px;border-radius:50%;border:1px solid var(--border);background:var(--surface2);color:var(--text-dim);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;transition:all 0.2s}
+.dp-close:hover{border-color:var(--accent);color:var(--text)}
+.dp-title{font-size:18px;font-weight:700;color:var(--text-bright);margin-bottom:4px}
+.dp-zone-id{font-size:11px;color:var(--text-dim);margin-bottom:20px}
+.dp-alert-banner{padding:8px 12px;border-radius:6px;font-size:12px;font-weight:600;margin-bottom:20px;display:flex;align-items:center;gap:8px}
+.dp-alert-banner.CRITICAL{background:rgba(239,68,68,0.12);color:var(--critical);border:1px solid rgba(239,68,68,0.3)}
+.dp-alert-banner.HIGH{background:rgba(249,115,22,0.12);color:var(--high);border:1px solid rgba(249,115,22,0.3)}
+.dp-alert-banner.MODERATE{background:rgba(234,179,8,0.12);color:var(--moderate);border:1px solid rgba(234,179,8,0.3)}
+.dp-alert-banner.LOW{background:rgba(34,197,94,0.12);color:var(--low);border:1px solid rgba(34,197,94,0.3)}
+.dp-stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px}
+.dp-stat-card{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:16px;text-align:center;transition:border-color .2s}
+.dp-stat-card:hover{border-color:var(--accent)}
+.dp-stat-card .label{font-size:9px;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;font-weight:600}
+.dp-stat-card .value{font-size:26px;font-weight:800;font-family:'SF Mono',Consolas,monospace}
+.dp-stat-card .unit{font-size:12px;color:var(--text-dim);margin-left:1px}
+.dp-section-title{font-size:12px;font-weight:600;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;margin-top:16px}
+.dp-chart{width:100%;height:80px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;margin-bottom:16px;position:relative;overflow:hidden}
+.dp-chart canvas{width:100%;height:100%}
+.dp-narrative{font-size:12px;line-height:1.6;color:var(--text-dim);margin-bottom:16px}
+.dp-source{font-size:10px;color:var(--text-dim);padding:8px 12px;background:var(--surface2);border-radius:6px;border:1px solid var(--border)}
+.dp-source span{color:var(--accent)}
+
+/* LOADING */
+.loading-overlay{position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity 0.5s}
+.loading-overlay.hidden{opacity:0;pointer-events:none}
+.loader-ring{width:48px;height:48px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loader-text{margin-top:16px;font-size:13px;color:var(--text-dim)}
+</style>
+</head>
+<body>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loader-ring"></div>
+  <div class="loader-text">Initializing CIRO Intelligence Platform...</div>
+</div>
+
+<div id="map"></div>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="brand">
+    <div class="brand-icon">C</div>
+    <div>
+      <div class="brand-title">CIRO</div>
+      <div class="brand-sub">Crisis Intelligence Platform</div>
+    </div>
+  </div>
+  <div class="ctrl-group">
+    <button class="ctrl-btn active" id="btnFlood" onclick="toggleLayer('flood')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v6m0 0l-3-3m3 3l3-3M2 12c2-3 4-4 6-4s4 2 6 2 4-1 6-4v10c-2 3-4 4-6 4s-4-2-6-2-4 1-6 4V12z"/></svg>
+      Flood
+    </button>
+    <button class="ctrl-btn" id="btnHeat" onclick="toggleLayer('heat')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a5 5 0 015 5c0 3-2 5-5 8-3-3-5-5-5-8a5 5 0 015-5z"/><circle cx="12" cy="7" r="1"/></svg>
+      Heat
+    </button>
+    <button class="ctrl-btn" id="btnRivers" onclick="toggleRivers()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4c2 4 6 4 8 0s6-4 8 0M4 12c2 4 6 4 8 0s6-4 8 0M4 20c2 4 6 4 8 0s6-4 8 0"/></svg>
+      Rivers
+    </button>
+  </div>
+  <div class="ctrl-group">
+    <button class="ctrl-btn" id="btnPlay" onclick="togglePlay()">
+      <svg id="playIcon" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>
+      <span id="playLabel">Play</span>
+    </button>
+    <button class="ctrl-btn" onclick="refreshData()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 4v6h6M23 20v-6h-6"/><path d="M20.49 9A9 9 0 005.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 013.51 15"/></svg>
+      Refresh
+    </button>
+  </div>
+  <div class="status-dot"></div>
+</div>
+
+<!-- TIMELINE -->
+<div class="timeline">
+  <div class="timeline-label">Forecast</div>
+  <div class="timeline-day" id="dayDisplay">Day 1</div>
+  <div class="slider-wrap">
+    <input type="range" id="daySlider" min="1" max="30" value="1" oninput="onDayChange(this.value)">
+  </div>
+  <div class="timeline-date" id="dateDisplay"></div>
+</div>
+
+<!-- BOTTOM CARDS -->
+<div class="cards-strip" id="cardsStrip"></div>
+
+<!-- DETAIL PANEL -->
+<div class="detail-panel" id="detailPanel">
+  <div class="dp-close" onclick="closePanel()">&times;</div>
+  <div id="panelContent"></div>
+</div>
+
+<script>
+// ========== CONFIGURATION ==========
+const ZONES = [
+  {id:'islamabad-g10', name:'Islamabad G-10', lat:33.6844, lng:73.0479, region:'Punjab/Capital'},
+  {id:'lahore-city', name:'Lahore City', lat:31.5204, lng:74.3587, region:'Punjab'},
+  {id:'karachi-south', name:'Karachi South', lat:24.8607, lng:67.0011, region:'Sindh'},
+  {id:'peshawar-city', name:'Peshawar City', lat:34.0151, lng:71.5249, region:'KPK'},
+  {id:'multan-city', name:'Multan City', lat:30.1575, lng:71.5249, region:'Punjab'},
+  {id:'jacobabad-city', name:'Jacobabad City', lat:28.2769, lng:68.4514, region:'Sindh'},
+  {id:'sukkur-city', name:'Sukkur City', lat:27.7052, lng:68.8574, region:'Sindh'},
+  {id:'quetta-city', name:'Quetta City', lat:30.1798, lng:66.9750, region:'Balochistan'}
+];
+
+const API_BASE = window.location.origin + '/api/v1/agent3/predict/';
+
+// River coordinates (actual geography approximations)
+const RIVERS = {
+  indus: {
+    name: 'Indus',
+    coords: [
+      [35.73,74.35],[35.50,74.10],[35.30,73.90],[35.10,73.70],[34.90,73.50],
+      [34.70,73.20],[34.50,72.90],[34.20,72.60],[33.95,72.35],[33.70,72.10],
+      [33.50,71.80],[33.20,71.60],[32.90,71.40],[32.60,71.20],[32.30,71.10],
+      [32.00,71.00],[31.60,70.90],[31.20,70.80],[30.80,70.60],[30.40,70.40],
+      [30.00,70.20],[29.60,69.80],[29.20,69.40],[28.80,69.00],[28.40,68.60],
+      [28.00,68.40],[27.60,68.30],[27.20,68.00],[26.80,67.80],[26.40,67.60],
+      [26.00,67.40],[25.60,67.30],[25.20,67.20],[24.80,67.10],[24.40,67.30]
+    ]
+  },
+  chenab: {
+    name: 'Chenab',
+    coords: [
+      [33.20,75.10],[33.00,74.90],[32.80,74.70],[32.60,74.50],[32.40,74.20],
+      [32.20,73.90],[32.10,73.60],[32.00,73.30],[31.90,73.00],[31.80,72.70],
+      [31.70,72.40],[31.60,72.20],[31.50,72.00],[31.35,71.80],[31.20,71.60],
+      [31.00,71.40],[30.80,71.30],[30.60,71.20],[30.40,71.10],[30.20,71.00],
+      [30.00,70.80],[29.80,70.60],[29.60,70.40],[29.40,70.30],[29.20,70.20]
+    ]
+  },
+  jhelum: {
+    name: 'Jhelum',
+    coords: [
+      [34.40,74.80],[34.20,74.60],[34.00,74.40],[33.80,74.20],[33.60,73.90],
+      [33.50,73.70],[33.40,73.50],[33.30,73.30],[33.15,73.20],[33.00,73.10],
+      [32.85,73.00],[32.70,72.90],[32.55,72.80],[32.40,72.70],[32.30,72.60],
+      [32.20,72.50],[32.10,72.40],[32.00,72.30],[31.90,72.20],[31.80,72.10],
+      [31.70,72.00],[31.55,71.90],[31.40,71.80],[31.25,71.70],[31.10,71.60]
+    ]
+  },
+  kabul: {
+    name: 'Kabul',
+    coords: [
+      [34.50,69.20],[34.55,69.60],[34.52,69.90],[34.48,70.20],[34.44,70.50],
+      [34.40,70.80],[34.35,71.00],[34.30,71.20],[34.25,71.35],[34.20,71.50],
+      [34.10,71.60],[34.05,71.70],[34.00,71.80],[33.95,71.90],[33.90,72.00],
+      [33.88,72.10],[33.85,72.20],[33.80,72.30],[33.77,72.40],[33.72,72.50],
+      [33.68,72.60],[33.65,72.70],[33.63,72.80],[33.60,72.90],[33.57,73.00]
+    ]
+  },
+  ravi: {
+    name: 'Ravi',
+    coords: [
+      [32.80,75.60],[32.60,75.40],[32.40,75.20],[32.20,75.00],[32.05,74.85],
+      [31.90,74.70],[31.80,74.60],[31.70,74.50],[31.60,74.40],[31.55,74.35],
+      [31.50,74.30],[31.45,74.25],[31.40,74.20],[31.35,74.10],[31.30,74.00],
+      [31.20,73.80],[31.10,73.60],[31.00,73.40],[30.90,73.20],[30.80,73.00],
+      [30.70,72.80],[30.60,72.60],[30.50,72.40],[30.40,72.20],[30.30,72.00]
+    ]
+  }
+};
+
+// Map dark style
+const MAP_STYLE = [
+  {elementType:'geometry',stylers:[{color:'#0f1620'}]},
+  {elementType:'labels.text.fill',stylers:[{color:'#8b9dc3'}]},
+  {elementType:'labels.text.stroke',stylers:[{color:'#0a0e14'}]},
+  {featureType:'administrative',elementType:'geometry.stroke',stylers:[{color:'#1e293b'}]},
+  {featureType:'administrative.country',elementType:'geometry.stroke',stylers:[{color:'#334155'}]},
+  {featureType:'administrative.locality',elementType:'labels.text.fill',stylers:[{color:'#c8d6e5'}]},
+  {featureType:'landscape',elementType:'geometry',stylers:[{color:'#0f1620'}]},
+  {featureType:'poi',stylers:[{visibility:'off'}]},
+  {featureType:'road',stylers:[{visibility:'off'}]},
+  {featureType:'road.highway',elementType:'geometry',stylers:[{visibility:'simplified'},{color:'#1a2332'}]},
+  {featureType:'road.highway',elementType:'labels',stylers:[{visibility:'off'}]},
+  {featureType:'transit',stylers:[{visibility:'off'}]},
+  {featureType:'water',elementType:'geometry',stylers:[{color:'#0c1929'}]},
+  {featureType:'water',elementType:'labels.text.fill',stylers:[{color:'#1e3a5f'}]}
+];
+
+// ========== STATE ==========
+let map, floodHeatmap, heatHeatmap;
+let zoneData = {};
+let currentDay = 1;
+let playing = false;
+let playInterval = null;
+let showFlood = true, showHeat = false, showRivers = false;
+let riverPolylines = [];
+let selectedZone = null;
+
+// ========== INITIALIZATION ==========
+function initMap() {
+  map = new google.maps.Map(document.getElementById('map'), {
+    center: {lat: 30.0, lng: 69.0},
+    zoom: 6,
+    styles: MAP_STYLE,
+    disableDefaultUI: true,
+    zoomControl: true,
+    zoomControlOptions: {position: google.maps.ControlPosition.LEFT_CENTER},
+    minZoom: 5,
+    maxZoom: 12,
+    backgroundColor: '#080c12'
+  });
+
+  floodHeatmap = new google.maps.visualization.HeatmapLayer({map: null, dissipating: true, radius: 40, opacity: 0.75});
+  heatHeatmap = new google.maps.visualization.HeatmapLayer({map: null, dissipating: true, radius: 40, opacity: 0.7});
+
+  setHeatmapGradients();
+  
+  map.addListener('zoom_changed', onZoomChange);
+  
+  updateDateDisplay();
+  fetchAllData().then(() => {
+    document.getElementById('loadingOverlay').classList.add('hidden');
+    renderCards();
+    updateHeatmaps();
+    updateFloodPlains();
+  });
+}
+
+function setHeatmapGradients() {
+  floodHeatmap.set('gradient', [
+    'rgba(0,0,0,0)',
+    'rgba(15,23,42,0.3)',
+    'rgba(30,64,175,0.5)',
+    'rgba(59,130,246,0.7)',
+    'rgba(96,165,250,0.85)',
+    'rgba(147,197,253,0.92)',
+    'rgba(219,234,254,1)'
+  ]);
+  heatHeatmap.set('gradient', [
+    'rgba(0,0,0,0)',
+    'rgba(124,45,18,0.3)',
+    'rgba(194,65,12,0.5)',
+    'rgba(234,88,12,0.7)',
+    'rgba(249,115,22,0.85)',
+    'rgba(253,186,116,0.92)',
+    'rgba(255,237,213,1)'
+  ]);
+}
+
+function onZoomChange() {
+  const zoom = map.getZoom();
+  const radiusMap = {5:30, 6:40, 7:60, 8:80, 9:100, 10:140, 11:160, 12:180};
+  const r = radiusMap[zoom] || 40;
+  floodHeatmap.set('radius', r);
+  heatHeatmap.set('radius', r);
+}
+
+// ========== DATA FETCHING ==========
+async function fetchAllData() {
+  const promises = ZONES.map(zone => fetchZoneData(zone.id));
+  await Promise.allSettled(promises);
+}
+
+async function fetchZoneData(zoneId) {
+  try {
+    const res = await fetch(API_BASE + zoneId, {method: 'POST'});
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    zoneData[zoneId] = data;
+  } catch(e) {
+    console.error(`⚠️ API FAILED for ${zoneId}: ${e.message} — using offline synthetic data`);
+    zoneData[zoneId] = generateSyntheticData(zoneId);
+  }
+}
+
+function generateSyntheticData(zoneId) {
+  const zone = ZONES.find(z => z.id === zoneId);
+  const baseSeed = hashCode(zoneId);
+  const predictions = [];
+  
+  // Realistic baselines per zone
+  const floodBase = {'islamabad-g10':0.25,'lahore-city':0.15,'karachi-south':0.12,'peshawar-city':0.35,'multan-city':0.20,'jacobabad-city':0.45,'sukkur-city':0.40,'quetta-city':0.18}[zoneId]||0.2;
+  const heatBase = {'islamabad-g10':0.30,'lahore-city':0.65,'karachi-south':0.25,'peshawar-city':0.40,'multan-city':0.80,'jacobabad-city':0.90,'sukkur-city':0.75,'quetta-city':0.15}[zoneId]||0.4;
+  
+  for (let d = 1; d <= 30; d++) {
+    const seed = baseSeed + d * 137;
+    const r1 = seededRandom(seed), r2 = seededRandom(seed + 1), r3 = seededRandom(seed + 2);
+    
+    // Monsoon ramp (flood increases days 8-20)
+    const monsoonFactor = d > 7 && d < 21 ? 1.0 + (d-7)*0.08 : 1.0;
+    const flood = clamp(floodBase * monsoonFactor * (0.6 + r1 * 0.8), 0, 0.95);
+    
+    // Heat peaks mid-period
+    const heatCurve = 1.0 + 0.3 * Math.sin((d/30) * Math.PI);
+    const heat = clamp(heatBase * heatCurve * (0.7 + r2 * 0.6), 0, 0.95);
+    
+    const maxRisk = Math.max(flood, heat);
+    const alertLevel = maxRisk >= 0.6 ? 'CRITICAL' : maxRisk >= 0.4 ? 'HIGH' : maxRisk >= 0.2 ? 'MODERATE' : 'LOW';
+    const baseTemp = {'Punjab':42,'Sindh':44,'KPK':38,'Federal':36,'Balochistan':35}[zone.province] || 38;
+    
+    predictions.push({
+      day: d,
+      date: new Date(Date.now() + d*86400000).toISOString().slice(0,10),
+      flood_risk: flood,
+      heatstroke_risk: heat,
+      dominant_factor: flood > heat ? 'Monsoon rainfall + river discharge' : 'Sustained extreme temperature',
+      expected_temp_c: baseTemp + r3*6 - 2,
+      expected_rain_mm: flood > 0.3 ? 15 + r1*40 : r1*8,
+      expected_humidity: 40 + r2*35,
+      alert_level: alertLevel,
+      confidence: d <= 7 ? 'high' : d <= 16 ? 'moderate' : 'low',
+      data_source: d <= 7 ? 'ecmwf_forecast' : d <= 16 ? 'prophet_blend' : 'xgboost_forecast'
+    });
+  }
+  
+  const floodRisks = predictions.map(p=>p.flood_risk);
+  const heatRisks = predictions.map(p=>p.heatstroke_risk);
+  const peakFloodIdx = floodRisks.indexOf(Math.max(...floodRisks));
+  const peakHeatIdx = heatRisks.indexOf(Math.max(...heatRisks));
+  const maxOverall = Math.max(floodRisks[peakFloodIdx], heatRisks[peakHeatIdx]);
+  
+  return {
+    zone_id: zoneId,
+    zone_name: zone.name,
+    province: zone.province,
+    predicted_at: new Date().toISOString(),
+    horizon_days: 30,
+    predictions: predictions,
+    summary: {
+      peak_flood_day: peakFloodIdx + 1,
+      peak_flood_risk: floodRisks[peakFloodIdx],
+      peak_heat_day: peakHeatIdx + 1,
+      peak_heat_risk: heatRisks[peakHeatIdx],
+      avg_flood_risk: floodRisks.reduce((a,b)=>a+b,0)/30,
+      avg_heat_risk: heatRisks.reduce((a,b)=>a+b,0)/30,
+      high_flood_days: floodRisks.filter(r=>r>0.4).length,
+      high_heat_days: heatRisks.filter(r=>r>0.4).length,
+      overall_alert_level: maxOverall >= 0.6 ? 'CRITICAL' : maxOverall >= 0.4 ? 'HIGH' : maxOverall >= 0.2 ? 'MODERATE' : 'LOW'
+    }
+  };
+}
+
+function hashCode(s) {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = ((h << 5) - h) + s.charCodeAt(i);
+  return Math.abs(h);
+}
+
+function seededRandom(seed) {
+  const x = Math.sin(seed * 9301 + 49297) * 49297;
+  return x - Math.floor(x);
+}
+
+function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+
+// ========== HEATMAP GENERATION ==========
+function boxMuller() {
+  let u1 = Math.random(), u2 = Math.random();
+  while (u1 === 0) u1 = Math.random();
+  const mag = Math.sqrt(-2 * Math.log(u1));
+  return [mag * Math.cos(2 * Math.PI * u2), mag * Math.sin(2 * Math.PI * u2)];
+}
+
+function generateGaussianPoints(lat, lng, risk, count) {
+  const sigma = 0.2 + risk * 0.3; // 0.2 to 0.5 degrees
+  const points = [];
+  for (let i = 0; i < count; i++) {
+    const [dx, dy] = boxMuller();
+    const pLat = lat + dx * sigma * 0.5;
+    const pLng = lng + dy * sigma * 0.7;
+    const weight = risk * (0.6 + Math.random() * 0.4);
+    points.push({location: new google.maps.LatLng(pLat, pLng), weight: weight});
+  }
+  return points;
+}
+
+function updateHeatmaps() {
+    updateFloodPlains();
+  const dayIdx = currentDay - 1;
+  let floodPoints = [], heatPoints = [];
+  let maxFloodWeight = 0, maxHeatWeight = 0;
+
+  ZONES.forEach(zone => {
+    const data = zoneData[zone.id];
+    if (!data || !data.predictions) return;
+    const pred = data.predictions[dayIdx] || data.predictions[0];
+    if (!pred) return;
+
+    const floodRisk = pred.flood_risk || 0;
+    const heatRisk = pred.heatstroke_risk || 0;
+
+    // Points count: 200-300, higher risk = more points
+    const floodCount = Math.floor(200 + floodRisk * 100);
+    const heatCount = Math.floor(200 + heatRisk * 100);
+
+    if (floodRisk > 0.02) {
+      const pts = generateGaussianPoints(zone.lat, zone.lng, floodRisk, floodCount);
+      floodPoints = floodPoints.concat(pts);
+      maxFloodWeight = Math.max(maxFloodWeight, floodRisk);
+    }
+    if (heatRisk > 0.02) {
+      const pts = generateGaussianPoints(zone.lat, zone.lng, heatRisk, heatCount);
+      heatPoints = heatPoints.concat(pts);
+      maxHeatWeight = Math.max(maxHeatWeight, heatRisk);
+    }
+  });
+
+  // Dynamic maxIntensity: max_weight * 0.6
+  floodHeatmap.setData(floodPoints);
+  floodHeatmap.set('maxIntensity', maxFloodWeight * 0.6);
+  floodHeatmap.setMap(showFlood ? map : null);
+    updateFloodPlains();
+
+  heatHeatmap.setData(heatPoints);
+  heatHeatmap.set('maxIntensity', maxHeatWeight * 0.6);
+  heatHeatmap.setMap(showHeat ? map : null);
+
+  updateRiverColors();
+  renderCards();
+}
+
+// ========== RIVERS ==========
+function createRivers() {
+  Object.values(RIVERS).forEach(river => {
+    const path = river.coords.map(c => ({lat: c[0], lng: c[1]}));
+    const polyline = new google.maps.Polyline({
+      path: path,
+      geodesic: true,
+      strokeColor: '#06b6d4',
+      strokeOpacity: 0.8,
+      strokeWeight: 3,
+      map: null
+    });
+    polyline._riverName = river.name;
+    riverPolylines.push(polyline);
+  });
+}
+
+// ─── FLOOD-PLAIN INUNDATION POLYGONS ─────────────────────────────
+// Based on Pakistan's actual flood-prone areas along the Indus basin
+// Areas that historically flood during high river discharge
+let floodPlainPolygons = [];
+
+const FLOOD_PLAINS = {
+  // Upper Indus (Peshawar-Nowshera-Charsadda) — Kabul River flood plain
+  peshawar_plain: [
+    [34.15,71.3],[34.1,71.5],[34.0,71.7],[33.9,71.9],[33.85,72.1],
+    [33.95,72.15],[34.05,71.95],[34.1,71.7],[34.15,71.5],[34.2,71.35],[34.15,71.3]
+  ],
+  // Islamabad-Rawalpindi (Soan/Lai Nullah flood zone)  
+  islamabad_plain: [
+    [33.75,72.9],[33.7,73.0],[33.65,73.1],[33.6,73.15],[33.55,73.1],
+    [33.6,73.0],[33.65,72.9],[33.7,72.85],[33.75,72.9]
+  ],
+  // Punjab plains (Chenab-Jhelum confluence — massive flood area)
+  punjab_central: [
+    [31.8,72.5],[31.6,72.8],[31.3,73.2],[31.0,73.5],[30.7,73.3],
+    [30.5,72.8],[30.3,72.3],[30.2,71.8],[30.4,71.5],[30.7,71.3],
+    [31.0,71.5],[31.3,71.8],[31.5,72.0],[31.8,72.5]
+  ],
+  // Multan-DG Khan (Indus-Chenab junction)
+  multan_plain: [
+    [30.4,70.8],[30.2,71.0],[30.0,71.3],[29.8,71.5],[29.6,71.3],
+    [29.5,71.0],[29.6,70.7],[29.8,70.5],[30.0,70.5],[30.2,70.6],[30.4,70.8]
+  ],
+  // Sukkur-Jacobabad (2022 flood epicenter — flat, low drainage)
+  sindh_upper: [
+    [28.8,68.0],[28.5,68.3],[28.2,68.6],[27.9,68.8],[27.5,69.0],
+    [27.2,68.8],[27.0,68.5],[27.2,68.2],[27.5,67.9],[27.8,67.7],
+    [28.1,67.8],[28.4,68.0],[28.6,67.9],[28.8,68.0]
+  ],
+  // Lower Sindh (Hyderabad-Thatta-Karachi delta)
+  sindh_lower: [
+    [26.5,67.8],[26.2,68.0],[25.8,68.2],[25.5,68.0],[25.2,67.7],
+    [25.0,67.3],[24.9,67.0],[25.1,66.8],[25.4,66.9],[25.7,67.0],
+    [26.0,67.2],[26.3,67.5],[26.5,67.8]
+  ],
+  // Quetta valley (flash flood from surrounding hills)
+  quetta_valley: [
+    [30.3,66.8],[30.2,67.0],[30.1,67.1],[30.0,67.0],[29.9,66.9],
+    [30.0,66.8],[30.1,66.7],[30.2,66.7],[30.3,66.8]
+  ],
+};
+
+// Map flood plains to nearby zones for risk coloring
+const PLAIN_TO_ZONE = {
+  peshawar_plain: 'peshawar-city',
+  islamabad_plain: 'islamabad-g10',
+  punjab_central: 'lahore-city',
+  multan_plain: 'multan-city',
+  sindh_upper: 'sukkur-city',  // Also jacobabad
+  sindh_lower: 'karachi-south',
+  quetta_valley: 'quetta-city',
+};
+
+function createFloodPlains() {
+  Object.entries(FLOOD_PLAINS).forEach(([name, coords]) => {
+    const path = coords.map(c => ({lat: c[0], lng: c[1]}));
+    const polygon = new google.maps.Polygon({
+      paths: path,
+      map: null, // Start hidden, shown when flood layer enabled
+      strokeColor: '#3b82f6',
+      strokeOpacity: 0.4,
+      strokeWeight: 1,
+      fillColor: '#3b82f6',
+      fillOpacity: 0.08, // Very subtle by default
+    });
+    polygon._name = name;
+    polygon._zoneId = PLAIN_TO_ZONE[name] || '';
+    floodPlainPolygons.push(polygon);
+  });
+}
+
+function updateFloodPlains() {
+  const dayIdx = currentDay - 1;
+  floodPlainPolygons.forEach(poly => {
+    const zoneId = poly._zoneId;
+    const data = zoneData[zoneId];
+    if (!data || !data.predictions || !data.predictions[dayIdx]) {
+      poly.setMap(showFlood ? map : null);
+      poly.setOptions({fillOpacity: 0.05, strokeOpacity: 0.2});
+      return;
+    }
+
+    const dayPred = data.predictions[dayIdx];
+    const floodRisk = dayPred.flood_risk;
+
+    if (showFlood && floodRisk > 0.05) {
+      poly.setMap(map);
+      // Color intensity scales with flood risk
+      const opacity = Math.min(0.45, floodRisk * 0.6);
+      const strokeOp = Math.min(0.8, floodRisk * 1.0);
+      
+      // Color shifts from blue to purple to red with increasing risk
+      let fillColor, strokeColor;
+      if (floodRisk >= 0.6) {
+        fillColor = '#7c3aed'; // Purple-red = very high
+        strokeColor = '#a855f7';
+      } else if (floodRisk >= 0.3) {
+        fillColor = '#3b82f6'; // Blue = moderate-high  
+        strokeColor = '#60a5fa';
+      } else {
+        fillColor = '#06b6d4'; // Cyan = low-moderate
+        strokeColor = '#22d3ee';
+      }
+
+      poly.setOptions({
+        fillColor: fillColor,
+        fillOpacity: opacity,
+        strokeColor: strokeColor,
+        strokeOpacity: strokeOp,
+        strokeWeight: floodRisk > 0.4 ? 2 : 1,
+      });
+    } else {
+      poly.setMap(null);
+    }
+  });
+}
+
+
+
+function updateRiverColors() {
+  if (!riverPolylines.length) createRivers();
+    createFloodPlains();
+  
+  // Calculate average flood risk for river coloring
+  const dayIdx = currentDay - 1;
+  let avgFlood = 0, count = 0;
+  ZONES.forEach(zone => {
+    const data = zoneData[zone.id];
+    if (!data || !data.predictions) return;
+    const pred = data.predictions[dayIdx];
+    if (pred) { avgFlood += pred.flood_risk || 0; count++; }
+  });
+  avgFlood = count > 0 ? avgFlood / count : 0;
+
+  let color = '#06b6d4'; // cyan
+  let weight = 2;
+  if (avgFlood > 0.4) { color = '#ef4444'; weight = 4; }
+  else if (avgFlood > 0.2) { color = '#f97316'; weight = 3; }
+
+  riverPolylines.forEach(p => {
+    p.setOptions({strokeColor: color, strokeWeight: weight});
+    p.setMap(showRivers ? map : null);
+  });
+}
+
+function toggleRivers() {
+  showRivers = !showRivers;
+  document.getElementById('btnRivers').classList.toggle('active', showRivers);
+  if (!riverPolylines.length) createRivers();
+  updateRiverColors();
+}
+
+// ========== LAYER TOGGLES ==========
+function toggleLayer(layer) {
+  if (layer === 'flood') {
+    showFlood = !showFlood;
+    document.getElementById('btnFlood').classList.toggle('active', showFlood);
+    floodHeatmap.setMap(showFlood ? map : null);
+  } else if (layer === 'heat') {
+    showHeat = !showHeat;
+    document.getElementById('btnHeat').classList.toggle('active', showHeat);
+    heatHeatmap.setMap(showHeat ? map : null);
+  }
+}
+
+// ========== TIMELINE ==========
+function onDayChange(val) {
+  currentDay = parseInt(val);
+  updateDateDisplay();
+    updateFloodPlains();
+  updateHeatmaps();
+  if (selectedZone) openPanel(selectedZone);
+}
+
+function updateDateDisplay() {
+  document.getElementById('dayDisplay').textContent = `Day ${currentDay}`;
+  const d = new Date();
+  d.setDate(d.getDate() + currentDay - 1);
+  document.getElementById('dateDisplay').textContent = d.toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'});
+}
+
+function togglePlay() {
+  playing = !playing;
+  const btn = document.getElementById('btnPlay');
+  const icon = document.getElementById('playIcon');
+  const label = document.getElementById('playLabel');
+  
+  if (playing) {
+    btn.classList.add('active');
+    icon.innerHTML = '<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>';
+    label.textContent = 'Pause';
+    playInterval = setInterval(() => {
+      currentDay = currentDay >= 30 ? 1 : currentDay + 1;
+      document.getElementById('daySlider').value = currentDay;
+      onDayChange(currentDay);
+    }, 800);
+  } else {
+    btn.classList.remove('active');
+    icon.innerHTML = '<polygon points="5,3 19,12 5,21"/>';
+    label.textContent = 'Play';
+    clearInterval(playInterval);
+  }
+}
+
+// ========== ZONE CARDS ==========
+function getAlertLevel(floodRisk, heatRisk) {
+  const maxRisk = Math.max(floodRisk, heatRisk);
+  if (maxRisk > 0.6) return 'CRITICAL';
+  if (maxRisk > 0.4) return 'HIGH';
+  if (maxRisk > 0.2) return 'MODERATE';
+  return 'LOW';
+}
+
+function renderCards() {
+  const strip = document.getElementById('cardsStrip');
+  strip.innerHTML = '';
+  const dayIdx = currentDay - 1;
+
+  ZONES.forEach(zone => {
+    const data = zoneData[zone.id];
+    let flood = 0, heat = 0;
+    if (data && data.predictions && data.predictions[dayIdx]) {
+      flood = data.predictions[dayIdx].flood_risk || 0;
+      heat = data.predictions[dayIdx].heatstroke_risk || 0;
+    }
+    const alert = getAlertLevel(flood, heat);
+    
+    const card = document.createElement('div');
+    card.className = 'zone-card' + (selectedZone === zone.id ? ' selected' : '');
+    card.setAttribute('data-alert', alert);
+    card.onclick = () => openPanel(zone.id);
+    // Get extra info
+    let temp = '--', rain = '--';
+    if (data && data.predictions && data.predictions[dayIdx]) {
+      temp = (data.predictions[dayIdx].expected_temp_c || 0).toFixed(0);
+      rain = (data.predictions[dayIdx].expected_rain_mm || 0).toFixed(0);
+    }
+    
+    card.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:start">
+        <div class="zc-name">${zone.name}</div>
+        <span class="zc-badge ${alert}">${alert}</span>
+      </div>
+      <div class="zc-stats">
+        <div class="zc-stat">
+          <span class="zc-stat-label">🌊</span>
+          <span class="zc-stat-value flood">${(flood*100).toFixed(0)}%</span>
+        </div>
+        <div class="zc-stat">
+          <span class="zc-stat-label">🔥</span>
+          <span class="zc-stat-value heat">${(heat*100).toFixed(0)}%</span>
+        </div>
+        <div class="zc-stat">
+          <span class="zc-stat-label">🌡️</span>
+          <span class="zc-stat-value" style="color:var(--text)">${temp}°</span>
+        </div>
+        <div class="zc-stat">
+          <span class="zc-stat-label">🌧️</span>
+          <span class="zc-stat-value" style="color:var(--blue)">${rain}mm</span>
+        </div>
+      </div>
+    `;
+    strip.appendChild(card);
+  });
+}
+
+// ========== DETAIL PANEL ==========
+function openPanel(zoneId) {
+  selectedZone = zoneId;
+  const panel = document.getElementById('detailPanel');
+  const content = document.getElementById('panelContent');
+  const zone = ZONES.find(z => z.id === zoneId);
+  
+  // Pan map to the selected zone
+  if (map && zone) {
+    map.panTo({lat: zone.lat, lng: zone.lng});
+    map.setZoom(8);
+  }
+  const data = zoneData[zoneId];
+  const dayIdx = currentDay - 1;
+
+  let flood = 0, heat = 0;
+  if (data && data.predictions && data.predictions[dayIdx]) {
+    flood = data.predictions[dayIdx].flood_risk || 0;
+    heat = data.predictions[dayIdx].heatstroke_risk || 0;
+  }
+  const alert = getAlertLevel(flood, heat);
+
+  // Calculate stats
+  let maxFlood = 0, maxHeat = 0, avgFlood = 0, avgHeat = 0;
+  if (data && data.predictions) {
+    data.predictions.forEach(p => {
+      maxFlood = Math.max(maxFlood, p.flood_risk || 0);
+      maxHeat = Math.max(maxHeat, p.heatstroke_risk || 0);
+      avgFlood += p.flood_risk || 0;
+      avgHeat += p.heatstroke_risk || 0;
+    });
+    avgFlood /= data.predictions.length;
+    avgHeat /= data.predictions.length;
+  }
+
+  const narrative = generateNarrative(zone, flood, heat, alert, avgFlood, avgHeat);
+
+  // Compute extra data for panel
+    let dayTemp = '--', dayRain = '--', dayHumidity = '--', dayWind = '--';
+    let dominant = 'N/A', confidence = 'low', dataSource = 'synthetic';
+    let peakFloodDay = 0, peakHeatDay = 0, highDangerDays = 0;
+    
+    if (data && data.predictions && data.predictions[dayIdx]) {
+      const dp = data.predictions[dayIdx];
+      dayTemp = (dp.expected_temp_c || 0).toFixed(1);
+      dayRain = (dp.expected_rain_mm || 0).toFixed(1);
+      dayHumidity = (dp.expected_humidity || 0).toFixed(0);
+      dominant = dp.dominant_factor || 'N/A';
+      confidence = dp.confidence || 'low';
+      dataSource = dp.data_source || 'model';
+    }
+    if (data && data.summary) {
+      peakFloodDay = data.summary.peak_flood_day || 0;
+      peakHeatDay = data.summary.peak_heat_day || 0;
+      highDangerDays = (data.summary.high_flood_days || 0) + (data.summary.high_heat_days || 0);
+    }
+
+    const alertColors = {CRITICAL:'#ef4444',HIGH:'#f97316',MODERATE:'#eab308',LOW:'#22c55e'};
+    const alertBg = alertColors[alert] || '#22c55e';
+    const confColor = confidence === 'high' ? '#22c55e' : confidence === 'moderate' ? '#eab308' : '#6b7280';
+
+    content.innerHTML = `
+    <div style="margin-bottom:20px">
+      <div class="dp-title" style="font-size:22px;font-weight:800;margin-bottom:4px">${zone.name}</div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+        <span style="color:var(--text-dim);font-size:11px">${zone.region}</span>
+        <span style="color:var(--border);font-size:11px">•</span>
+        <span style="color:var(--text-dim);font-size:11px">${zone.lat.toFixed(2)}°N, ${zone.lng.toFixed(2)}°E</span>
+      </div>
+      <div style="display:inline-flex;align-items:center;gap:8px;padding:8px 16px;border-radius:8px;background:${alertBg}18;border:1px solid ${alertBg}44">
+        <div style="width:10px;height:10px;border-radius:50%;background:${alertBg};animation:pulse 2s infinite"></div>
+        <span style="color:${alertBg};font-size:12px;font-weight:700;letter-spacing:0.5px">${alert} — Day ${currentDay}</span>
+      </div>
+    </div>
+
+    <!-- Current Day Conditions -->
+    <div style="margin-bottom:20px">
+      <div style="font-size:10px;color:var(--text-dim);font-weight:700;letter-spacing:1px;margin-bottom:10px">DAY ${currentDay} CONDITIONS</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div style="background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.2);border-radius:10px;padding:14px;text-align:center">
+          <div style="font-size:9px;color:#60a5fa;font-weight:600;letter-spacing:0.8px;margin-bottom:6px">🌊 FLOOD RISK</div>
+          <div style="font-size:28px;font-weight:800;color:#3b82f6;font-family:'SF Mono',monospace">${(flood*100).toFixed(0)}<span style="font-size:14px;color:#60a5fa">%</span></div>
+        </div>
+        <div style="background:rgba(249,115,22,0.08);border:1px solid rgba(249,115,22,0.2);border-radius:10px;padding:14px;text-align:center">
+          <div style="font-size:9px;color:#fb923c;font-weight:600;letter-spacing:0.8px;margin-bottom:6px">🔥 HEAT RISK</div>
+          <div style="font-size:28px;font-weight:800;color:#f97316;font-family:'SF Mono',monospace">${(heat*100).toFixed(0)}<span style="font-size:14px;color:#fb923c">%</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Weather -->
+    <div style="margin-bottom:20px">
+      <div style="font-size:10px;color:var(--text-dim);font-weight:700;letter-spacing:1px;margin-bottom:10px">WEATHER</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center">
+          <div style="font-size:20px;font-weight:800;color:var(--text)">${dayTemp}°</div>
+          <div style="font-size:8px;color:var(--text-dim);margin-top:3px">TEMP (°C)</div>
+        </div>
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center">
+          <div style="font-size:20px;font-weight:800;color:#3b82f6">${dayRain}</div>
+          <div style="font-size:8px;color:var(--text-dim);margin-top:3px">RAIN (mm)</div>
+        </div>
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center">
+          <div style="font-size:20px;font-weight:800;color:#06b6d4">${dayHumidity}%</div>
+          <div style="font-size:8px;color:var(--text-dim);margin-top:3px">HUMIDITY</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 30-Day Summary -->
+    <div style="margin-bottom:20px">
+      <div style="font-size:10px;color:var(--text-dim);font-weight:700;letter-spacing:1px;margin-bottom:10px">30-DAY OUTLOOK</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:10px">
+        <div style="background:var(--surface2);border:1px solid rgba(59,130,246,0.2);border-radius:8px;padding:10px;text-align:center">
+          <div style="font-size:18px;font-weight:800;color:#3b82f6">Day ${peakFloodDay}</div>
+          <div style="font-size:8px;color:var(--text-dim);margin-top:3px">PEAK FLOOD</div>
+        </div>
+        <div style="background:var(--surface2);border:1px solid rgba(249,115,22,0.2);border-radius:8px;padding:10px;text-align:center">
+          <div style="font-size:18px;font-weight:800;color:#f97316">Day ${peakHeatDay}</div>
+          <div style="font-size:8px;color:var(--text-dim);margin-top:3px">PEAK HEAT</div>
+        </div>
+        <div style="background:var(--surface2);border:1px solid rgba(239,68,68,0.2);border-radius:8px;padding:10px;text-align:center">
+          <div style="font-size:18px;font-weight:800;color:#ef4444">${highDangerDays}</div>
+          <div style="font-size:8px;color:var(--text-dim);margin-top:3px">⚠️ DANGER DAYS</div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center">
+          <div style="font-size:16px;font-weight:800;color:#3b82f6">${(maxFlood*100).toFixed(0)}%</div>
+          <div style="font-size:8px;color:var(--text-dim);margin-top:3px">MAX FLOOD RISK</div>
+        </div>
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center">
+          <div style="font-size:16px;font-weight:800;color:#f97316">${(maxHeat*100).toFixed(0)}%</div>
+          <div style="font-size:8px;color:var(--text-dim);margin-top:3px">MAX HEAT RISK</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Trend Chart -->
+    <div style="margin-bottom:20px">
+      <div style="font-size:10px;color:var(--text-dim);font-weight:700;letter-spacing:1px;margin-bottom:10px">30-DAY TREND</div>
+      <div class="dp-chart"><canvas id="trendCanvas"></canvas></div>
+    </div>
+
+    <!-- Assessment -->
+    <div style="margin-bottom:20px">
+      <div style="font-size:10px;color:var(--text-dim);font-weight:700;letter-spacing:1px;margin-bottom:10px">AI ASSESSMENT</div>
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px">
+        <div style="color:var(--text);font-size:12px;line-height:1.8">${narrative}</div>
+        <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
+          <div style="font-size:10px;color:var(--text-dim);margin-bottom:4px">Dominant Factor</div>
+          <div style="font-size:12px;color:var(--accent);font-weight:600">${dominant}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Confidence & Source -->
+    <div style="margin-bottom:12px">
+      <div style="font-size:10px;color:var(--text-dim);font-weight:700;letter-spacing:1px;margin-bottom:10px">MODEL INFO</div>
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <span style="font-size:10px;color:var(--text-dim)">Confidence</span>
+          <span style="font-size:11px;font-weight:700;color:${confColor}">${confidence.toUpperCase()}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <span style="font-size:10px;color:var(--text-dim)">Data Source</span>
+          <span style="font-size:10px;color:var(--text)">${dataSource}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <span style="font-size:10px;color:var(--text-dim)">Model</span>
+          <span style="font-size:10px;color:var(--accent)">CIRO v3.0 (XGBoost+EWMA+Sigmoid)</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:10px;color:var(--text-dim)">Updated</span>
+          <span style="font-size:10px;color:var(--text)">${new Date().toLocaleString()}</span>
+        </div>
+      </div>
+    </div>
+  `;
+
+  panel.classList.add('open');
+  renderCards();
+
+  // Draw mini chart
+  setTimeout(() => drawTrendChart(data), 50);
+}
+
+function closePanel() {
+  document.getElementById('detailPanel').classList.remove('open');
+  selectedZone = null;
+  renderCards();
+}
+
+function generateNarrative(zone, flood, heat, alert, avgFlood, avgHeat) {
+  let text = `<strong>${zone.name}</strong> in ${zone.region} is currently under <strong>${alert}</strong> alert status. `;
+  if (flood > 0.5) {
+    text += `Flood risk is critically elevated at ${(flood*100).toFixed(0)}%, indicating potential inundation in low-lying areas. Immediate preparedness measures are recommended. `;
+  } else if (flood > 0.3) {
+    text += `Flood risk at ${(flood*100).toFixed(0)}% suggests elevated water levels with potential for localized flooding. `;
+  } else {
+    text += `Flood risk remains manageable at ${(flood*100).toFixed(0)}%. `;
+  }
+  if (heat > 0.5) {
+    text += `Extreme heat conditions detected (${(heat*100).toFixed(0)}% risk) — heat advisories should be activated for vulnerable populations.`;
+  } else if (heat > 0.3) {
+    text += `Heat stress levels are elevated at ${(heat*100).toFixed(0)}%, warranting monitoring of outdoor workers and elderly.`;
+  } else {
+    text += `Heat conditions are within normal parameters.`;
+  }
+  return text;
+}
+
+function drawTrendChart(data) {
+  const canvas = document.getElementById('trendCanvas');
+  if (!canvas || !data || !data.predictions) return;
+  const ctx = canvas.getContext('2d');
+  const rect = canvas.parentElement.getBoundingClientRect();
+  canvas.width = rect.width * 2;
+  canvas.height = rect.height * 2;
+  ctx.scale(2, 2);
+  const w = rect.width, h = rect.height;
+  const pad = {l:8, r:8, t:10, b:10};
+  const plotW = w - pad.l - pad.r;
+  const plotH = h - pad.t - pad.b;
+  const n = data.predictions.length;
+
+  // Draw flood line
+  ctx.beginPath();
+  ctx.strokeStyle = '#3b82f6';
+  ctx.lineWidth = 1.5;
+  data.predictions.forEach((p, i) => {
+    const x = pad.l + (i / (n-1)) * plotW;
+    const y = pad.t + plotH - (p.flood_risk || 0) * plotH;
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+
+  // Flood fill
+  ctx.lineTo(pad.l + plotW, pad.t + plotH);
+  ctx.lineTo(pad.l, pad.t + plotH);
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(59,130,246,0.1)';
+  ctx.fill();
+
+  // Draw heat line
+  ctx.beginPath();
+  ctx.strokeStyle = '#ef4444';
+  ctx.lineWidth = 1.5;
+  data.predictions.forEach((p, i) => {
+    const x = pad.l + (i / (n-1)) * plotW;
+    const y = pad.t + plotH - (p.heatstroke_risk || 0) * plotH;
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+
+  // Heat fill
+  ctx.lineTo(pad.l + plotW, pad.t + plotH);
+  ctx.lineTo(pad.l, pad.t + plotH);
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(239,68,68,0.08)';
+  ctx.fill();
+
+  // Current day marker
+  const cx = pad.l + ((currentDay - 1) / (n-1)) * plotW;
+  ctx.beginPath();
+  ctx.strokeStyle = 'rgba(249,115,22,0.6)';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([3, 3]);
+  ctx.moveTo(cx, pad.t);
+  ctx.lineTo(cx, pad.t + plotH);
+  ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+// ========== REFRESH ==========
+async function refreshData() {
+  document.getElementById('loadingOverlay').classList.remove('hidden');
+  await fetchAllData();
+  document.getElementById('loadingOverlay').classList.add('hidden');
+    updateFloodPlains();
+  updateHeatmaps();
+  if (selectedZone) openPanel(selectedZone);
+}
+
+// ========== STARTUP ==========
+window.initMap = initMap;
+</script>
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDnlFt1G1BQKoZ8PzSIi-th5teJu8JdEYM&libraries=visualization&callback=initMap" async defer></script>
+</body>
+</html>

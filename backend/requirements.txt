@@ -1,7 +1,33 @@
-fastapi>=0.115.0
-uvicorn>=0.30.0
-apscheduler>=3.10.4
-pandas>=2.1.0
-httpx>=0.25.0
-websockets>=12.0
-python-dotenv>=1.0.0
+# CIRO Backend - Dependencies
+
+# Core Framework
+fastapi==0.115.0
+uvicorn[standard]==0.30.0
+pydantic==2.9.0
+pydantic-settings==2.5.0
+websockets==12.0
+
+# HTTP Client
+httpx==0.27.0
+
+# Database
+aiosqlite==0.20.0
+
+# Scheduler
+apscheduler==3.10.4
+
+# ML (Agent 3)
+scikit-learn==1.5.0
+xgboost==2.1.0
+prophet==1.1.5
+joblib==1.4.0
+pandas==2.2.0
+numpy==1.26.0
+
+# Utilities
+python-dotenv==1.0.1
+python-multipart==0.0.9
+
+# Agent 1 - Imagery & Geospatial
+earthengine-api==0.1.411
+google-auth==2.29.0
