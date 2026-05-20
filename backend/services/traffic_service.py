@@ -1,35 +1,45 @@
 import logging
-from typing import List, Dict, Any
+import random
+from typing import Dict, Any, List
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("CIRO.TrafficService")
 
 class TrafficService:
     """
-    TrafficService fetches traffic, road blockage, and logistical disruption data 
-    surrounding major urban channels in Pakistan.
+    TrafficService interacts with transit APIs (such as Google Maps Traffic)
+    to identify road blocks, waterlogged highway channels, and logistics congestion indexes.
     """
+    def __init__(self):
+        logger.info("TrafficService routing client initialized.")
 
     async def get_disruptions(self, lat: float, lng: float) -> List[Dict[str, Any]]:
         """
-        Fetch all traffic and road blocks near the specified coordinate.
-        Useful for planning evacuation routes and predicting local blockages.
+        Identify logistical delays and road blocks near the specified coordinates.
         """
-        logger.info(f"Retrieving traffic disruptions near: {lat}, {lng}")
-        return [
+        logger.info(f"Checking transit interruptions for geoloc coordinates: lat={lat}, lng={lng}")
+        
+        # In a real run, this queries Google Maps API.
+        # We return realistic transit stubs showing waterlogged road delays.
+        disruptions = [
             {
-                "type": "Road Block",
-                "severity": "Major",
-                "description": "Flooding on main arterial road, lane closures in effect.",
-                "latitude": lat + 0.002,
-                "longitude": lng - 0.001,
-                "confidence": 0.92
+                "disruption_id": f"dis_tr_{random.randint(100, 999)}",
+                "severity": "MAJOR",
+                "description": "Severe waterlogging near key underpass. Traffic diverted to high-altitude corridor.",
+                "coordinates": [lat + 0.012, lng - 0.005],
+                "delay_minutes": 35,
+                "closed_status": True
             },
             {
-                "type": "Traffic Congestion",
-                "severity": "Moderate",
-                "description": "Heavy traffic due to localized rainfall water logging.",
-                "latitude": lat - 0.004,
-                "longitude": lng + 0.003,
-                "confidence": 0.85
+                "disruption_id": f"dis_tr_{random.randint(100, 999)}",
+                "severity": "MODERATE",
+                "description": "Localized water logging causing minor lane blockages.",
+                "coordinates": [lat - 0.008, lng + 0.015],
+                "delay_minutes": 12,
+                "closed_status": False
             }
         ]
+        
+        # 30% chance of major transit viability delays in monsoon weather
+        if random.random() < 0.35:
+            return disruptions
+        return [disruptions[1]]  # return only minor delay under ordinary weather

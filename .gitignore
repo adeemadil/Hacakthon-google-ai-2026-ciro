@@ -1,21 +1,12 @@
-# Python
 __pycache__/
 *.pyc
+.env
 *.joblib
 *.pkl
 *.db
-*.log
-
-# Environment
-.env
-
-# Flutter / Dart
 .dart_tool/
 build/
 .flutter-plugins
-
-# Node
 node_modules/
-
-# OS-specific
 .DS_Store
+*.log

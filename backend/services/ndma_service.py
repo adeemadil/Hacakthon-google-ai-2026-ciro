@@ -1,28 +1,34 @@
 import logging
-from datetime import datetime
-from typing import List, Dict, Any
+import random
+from typing import Dict, Any, List
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("CIRO.NDMAService")
 
 class NDMAService:
     """
-    NDMAService interfaces with official government crisis platforms like the National Disaster
-    Management Authority (NDMA) and PDMA to ingest formal advisories and warnings.
+    NDMAService interacts with official government emergency dashboards (NDMA/PDMA)
+    to ingest official monsoon advisories and heatwave alerts.
     """
+    def __init__(self):
+        logger.info("NDMAService advisory collector initialized.")
 
     async def get_alerts(self, zone_id: str) -> List[Dict[str, Any]]:
         """
-        Fetch active alerts, warnings, and bulletins issued by NDMA or regional PDMAs.
+        Ingest current official warnings issued for the specific city/zone.
         """
-        logger.info(f"Checking official NDMA/PDMA alerts for zone: {zone_id}")
-        return [
+        logger.info(f"Querying NDMA/PDMA warning catalog for zone: {zone_id}")
+        
+        # Simulating parsed warning bulletins with the default 0.50 baseline confidence
+        warnings = [
             {
-                "alert_id": f"ndma_alert_{zone_id}_99",
+                "alert_id": f"gov_ndma_{random.randint(100, 999)}",
                 "authority": "NDMA Pakistan",
-                "title": f"Pre-Monsoon Flood Warning for {zone_id.title()}",
-                "severity": "High",
-                "issued_at": datetime.utcnow().isoformat(),
+                "severity_level": "RED",
+                "advisory": f"Pre-monsoon warning: Heavy precipitation expected in {zone_id} and adjoining basins. Low-lying zones advised to execute immediate safety staging.",
                 "confidence": 0.50,
-                "description": f"Significant rainfall expected to trigger urban flooding in low-lying sectors of {zone_id}."
+                "verification_status": "OFFICIAL"
             }
         ]
+        
+        # Return official warning if applicable
+        return warnings

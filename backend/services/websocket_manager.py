@@ -1,54 +1,48 @@
 import logging
 from typing import List, Any
+from fastapi import WebSocket
 
-logger = logging.getLogger(__name__)
-
-# Graceful import of WebSocket from FastAPI
-try:
-    from fastapi import WebSocket
-except ImportError:
-    # Safe fallback stub for type hinting in environments where FastAPI is not yet installed
-    class WebSocket:
-        async def accept(self): pass
-        async def send_json(self, data: Any): pass
+logger = logging.getLogger("CIRO.WebSocketManager")
 
 class WebSocketManager:
     """
-    WebSocketManager tracks active client connections (such as from the Flutter app)
-    and handles real-time broadcasting of alerts and predictions.
+    WebSocketManager tracks, registers, and broadcasts real-time telemetry metrics
+    and orchestrated crisis alerts to active frontend client connections.
     """
     def __init__(self):
         self.active_connections: List[WebSocket] = []
 
     async def connect(self, websocket: WebSocket):
         """
-        Accept and store a new active connection.
+        Accept and register a new active client connection.
         """
         await websocket.accept()
         self.active_connections.append(websocket)
-        logger.info(f"New client connected. Active connections: {len(self.active_connections)}")
+        logger.info(f"WebSocket client registered. Active sessions: {len(self.active_connections)}")
 
     def disconnect(self, websocket: WebSocket):
         """
-        Remove a disconnected client from the active registry.
+        Deregister and clean up a disconnected client socket session.
         """
         if websocket in self.active_connections:
             self.active_connections.remove(websocket)
-            logger.info(f"Client disconnected. Active connections: {len(self.active_connections)}")
+            logger.info(f"WebSocket client deregistered. Active sessions: {len(self.active_connections)}")
 
     async def broadcast(self, message: Any):
         """
-        Broadcast a JSON-compatible dictionary to all active clients.
+        Broadcast a JSON-compatible alert payload to all registered web sockets.
+        Automatically cleans up stale, broken client channels.
         """
-        logger.info(f"Broadcasting message to {len(self.active_connections)} connected clients.")
-        disconnected_clients = []
+        logger.info(f"Broadcasting websocket alert package to {len(self.active_connections)} clients...")
+        stale_sessions = []
+        
         for connection in self.active_connections:
             try:
                 await connection.send_json(message)
             except Exception as e:
-                logger.error(f"Error broadcasting to client connection: {e}")
-                disconnected_clients.append(connection)
+                logger.error(f"WebSocket transmission error to connection: {e}")
+                stale_sessions.append(connection)
                 
-        # Clean up stale connections
-        for client in disconnected_clients:
-            self.disconnect(client)
+        # Purge dead sessions
+        for session in stale_sessions:
+            self.disconnect(session)
