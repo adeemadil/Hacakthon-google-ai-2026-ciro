@@ -19,3 +19,8 @@ node_modules/
 
 # OS-specific
 .DS_Store
+*.png
+*.jpg
+*.jpeg
+*.ico
+*.PNG
